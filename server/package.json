@@ -1,0 +1,16 @@
+{
+  "name": "roadfix-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RoadFix local Node.js + file-backed DB server (replaces Supabase for local development). Zero runtime dependencies.",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/seed.js",
+    "reset": "node src/reset.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

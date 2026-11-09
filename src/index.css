@@ -1,0 +1,269 @@
+@import "@fontsource-variable/plus-jakarta-sans";
+@import "@fontsource-variable/jetbrains-mono";
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+
+    /* Base Surfaces & Typography */
+    --background: #0b1220;
+    --foreground: #f8fafc;
+
+    --card: #111c2e;
+    --card-foreground: #f8fafc;
+
+    --popover: #111c2e;
+    --popover-foreground: #f8fafc;
+
+    --surface-elevated: #182438;
+
+    /* Brand Primary (Road Orange) & Accents */
+    --primary: #f97316;
+    --primary-foreground: #0b1220;
+
+    --secondary: #182438;
+    --secondary-foreground: #f8fafc;
+
+    --muted: #182438;
+    --muted-foreground: #94a3b8;
+
+    --accent: #1e293b;
+    --accent-foreground: #f8fafc;
+
+    /* Semantic Status Tokens */
+    --destructive: #ef4444;
+    --destructive-foreground: #0b1220;
+
+    --success: #22c55e;
+    --success-foreground: #0b1220;
+
+    --warning: #f59e0b;
+    --warning-foreground: #0b1220;
+
+    --info: #38bdf8;
+    --info-foreground: #0b1220;
+
+    /* Borders & Interaction Boundaries */
+    --border: #263449;
+    --input: #5b6b84;
+    --ring: #f97316;
+
+    /* Radii Scale (Base 0.625rem = 10px) */
+    --radius: 0.625rem;
+
+    /* Transitions & Motion */
+    --duration-fast: 150ms;
+    --duration-base: 200ms;
+    --duration-slow: 300ms;
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Restrained Brand Glow */
+    --shadow-orange-glow: 0 0 20px -3px rgba(249, 115, 22, 0.25);
+
+    /* Font Stacks */
+    --font-sans:
+      "Plus Jakarta Sans Variable", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:
+      "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco,
+      Consolas, "Liberation Mono", "Courier New", monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+    scrollbar-width: thin;
+    scrollbar-color: #263449 #0b1220;
+  }
+
+  ::selection {
+    background-color: rgba(249, 115, 22, 0.3);
+    color: #f8fafc;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
+    overflow-x: hidden;
+    min-width: 320px;
+  }
+
+  #root {
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  img,
+  svg,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  select.input,
+  textarea.input {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--input);
+    border-radius: var(--radius);
+    background: var(--background);
+    color: var(--foreground);
+    padding: 0.625rem 0.75rem;
+    outline: none;
+    transition: border-color var(--duration-fast) var(--ease-standard), box-shadow var(--duration-fast) var(--ease-standard);
+  }
+
+  select.input:focus,
+  textarea.input:focus {
+    border-color: var(--ring);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ring) 35%, transparent);
+  }
+
+  textarea.input {
+    min-height: 7rem;
+    resize: vertical;
+  }
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-surface-elevated: var(--surface-elevated);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Scrollbar Webkit Fallback */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b1220;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #263449;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #5b6b84;
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Technical Identifier Utility (Tabular Numbers & Monospace) */
+.font-mono-tech {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Restrained Brand Glow Utility */
+.shadow-glow {
+  box-shadow: var(--shadow-orange-glow);
+}
+
+/* Homepage Motion Utilities (CSS-only) */
+@keyframes drawRoadPath {
+  from {
+    stroke-dashoffset: 800;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes ambientGlowPulse {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes heroContentReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-draw-road {
+  stroke-dasharray: 800;
+  stroke-dashoffset: 0;
+  animation: drawRoadPath 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-ambient-glow {
+  transform-origin: center;
+  animation: ambientGlowPulse 7s ease-in-out infinite;
+}
+
+.animate-hero-reveal {
+  animation: heroContentReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
