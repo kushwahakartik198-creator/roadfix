@@ -18,9 +18,9 @@ export interface EnvValidationResult {
 /**
  * Civic Road Maintenance Domain Types (Stubs for future phases)
  */
-export type ReportStatus = "reported" | "verified" | "in_progress" | "resolved" | "rejected";
+export type ReportStatus = "submitted" | "under_review" | "verified" | "in_progress" | "resolved" | "rejected";
 
-export type ReportSeverity = "low" | "medium" | "high" | "critical";
+export type ReportSeverity = "low" | "medium" | "high";
 
 export interface PotholeReportStub {
   readonly id: string;

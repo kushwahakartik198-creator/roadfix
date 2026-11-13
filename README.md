@@ -1,214 +1,91 @@
 # RoadFix
 
-> **Civic-tech road maintenance and pothole reporting initiative, Agra, Uttar Pradesh, India.**  
-> _Note: RoadFix is an open civic-tech initiative and is not an official government service._
+RoadFix is a civic reporting application for residents to report road problems and for authorized administrators and ward officers to manage complaints. It is a community project and is not an official government service.
 
----
+## Architecture
 
-## Overview
+- React, TypeScript, Vite frontend.
+- Node.js HTTP API.
+- Local SQLite database using `better-sqlite3`; the default file is `server/data/roadfix.sqlite`.
+- Uploaded complaint images are stored under `server/data/uploads/` by default and served only through authenticated API routes.
+- Supabase code, package and configuration files remain in the repository for legacy reasons. The current application uses the local API, SQLite and RoadFix session authentication; it does not use Supabase for application data or authentication.
 
-RoadFix is a modern web application designed to bridge the gap between citizens reporting road hazards (potholes, road erosion, surface hazards) and municipal maintenance teams in Agra, Uttar Pradesh, India.
+## Requirements and installation
 
-This repository currently contains **Phase 0: Project Initialization and Technical Foundation**. It establishes an accessible, type-safe, runnable foundation with zero product logic, forms, or backend mutations.
+Use Node.js 24 (the project has been exercised on Node 24); the server package declares Node.js 20 or newer. Use a supported npm release supplied with Node.js.
 
----
-
-## Technical Stack
-
-- **Framework**: [React 19](https://react.dev/) + [Vite](https://vitejs.dev/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict mode enabled)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) with `@tailwindcss/vite`
-- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) (`button`, `card`, `input`, `label`, `badge`, `sonner`)
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Routing**: [React Router](https://reactrouter.com/) (v7)
-- **Backend Client**: [@supabase/supabase-js](https://supabase.com/docs/reference/javascript) (Stubbed & optional in Phase 0)
-- **Mapping (Installed)**: [Leaflet](https://leafletjs.com/) and [react-leaflet](https://react-leaflet.js.org/) (Dependencies installed only; maps are deferred to Phase 1)
-- **Testing**: [Vitest](https://vitest.dev/), [React Testing Library](https://testing-library.com/), and [jsdom](https://github.com/jsdom/jsdom)
-- **Code Quality**: [ESLint](https://eslint.org/) (Flat config + typescript-eslint + react-hooks) and [Prettier](https://prettier.io/)
-- **CI / Deployment Targets**: [GitHub Actions](https://github.com/features/actions) and [Vercel](https://vercel.com/)
-
----
-
-## Setup & Getting Started
-
-### Prerequisites
-
-- **Node.js**: `v20.x` or `v22.x` / `v24.x` (Tested on Node `v24.20.0`)
-- **Package Manager**: `npm` (`10.x` or `11.x`)
-
-### Installation
-
-Clone the repository and install dependencies using the frozen lockfile:
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/roadfix.git
-cd roadfix
-
-# Clean installation from package-lock.json
+```powershell
 npm ci
+npm ci --prefix server
 ```
 
-### Running Locally
+## Local development
 
-To launch the Vite development server:
+Create no production data for development. Start both local services from the repository root:
 
-```bash
-npm run dev
+```powershell
+npm run dev:full
 ```
 
-Visit `http://localhost:5173` in your browser.
+Vite listens on `http://127.0.0.1:5173` and proxies `/api` to the local API on port 4000. To run only the API, use `npm run server`; to run only Vite, use `npm run dev`. Ctrl+C stops the development launcher. Local security mode is loopback-only.
 
----
+## Tests and quality checks
 
-## Available Scripts
+Run at the repository root:
 
-| Command              | Purpose                                                               |
-| :------------------- | :-------------------------------------------------------------------- |
-| `npm run dev`        | Boots local Vite development server with HMR                          |
-| `npm run build`      | Compiles TypeScript and builds optimized production bundle to `dist/` |
-| `npm run preview`    | Serves the production build locally for verification                  |
-| `npm run lint`       | Runs ESLint analysis across all TypeScript and React files            |
-| `npm run typecheck`  | Validates TypeScript types across the project (`tsc --noEmit`)        |
-| `npm run test`       | Executes the Vitest test suite once (non-watch mode)                  |
-| `npm run format`     | Checks file formatting compliance with Prettier                       |
-| `npm run format:fix` | Automatically formats codebase files using Prettier                   |
-
----
-
-## Environment Variables
-
-In **Phase 0**, all environment variables are **completely optional**. The application boots gracefully and all routes function without any `.env` file present.
-
-Refer to [`.env.example`](.env.example) for placeholder definitions:
-
-```env
-# The public URL of your Supabase project (optional in Phase 0)
-VITE_SUPABASE_URL=
-
-# The public anon key for your Supabase project (optional in Phase 0)
-VITE_SUPABASE_ANON_KEY=
+```powershell
+npm test
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-- When credentials are not provided, `src/lib/supabase.ts` exports `null` and logs at most one clear warning per session.
-- Never commit real `.env` or `.env.local` files into source control.
+Backend tests use the server package:
 
----
-
-## Project Structure
-
-```
-roadfix/
-├── .github/
-│   └── workflows/
-│       └── ci.yml               # GitHub Actions CI workflow
-├── public/                      # Static web assets
-├── src/
-│   ├── app/                     # Application shell and routing
-│   │   ├── App.tsx              # Root component
-│   │   └── router.tsx           # React Router route definitions
-│   ├── components/
-│   │   ├── layout/              # Structural layout components
-│   │   │   ├── AppShell.tsx     # Semantic landmarks (<header>, <main>, <footer>)
-│   │   │   ├── Header.tsx       # Wordmark, responsive navigation, skip link
-│   │   │   └── Footer.tsx       # Mandated civic initiative disclaimer
-│   │   └── ui/                  # shadcn/ui components
-│   │       ├── badge.tsx
-│   │       ├── button.tsx
-│   │       ├── card.tsx
-│   │       ├── input.tsx
-│   │       ├── label.tsx
-│   │       └── sonner.tsx
-│   ├── features/                # Domain feature modules (Phase 1+ stubs)
-│   │   ├── auth/                # .gitkeep
-│   │   ├── dashboard/           # .gitkeep
-│   │   ├── map/                 # .gitkeep
-│   │   └── reports/             # .gitkeep
-│   ├── lib/                     # Utilities and client wrappers
-│   │   ├── env.ts               # Safe, non-throwing env validation
-│   │   ├── supabase.ts          # Safe Supabase client initialization
-│   │   └── utils.ts             # Tailwind class merging (cn)
-│   ├── pages/                   # Application route views
-│   │   ├── HomePage.tsx         # Hero section & civic intro
-│   │   ├── ReportPage.tsx       # Placeholder (Phase 1)
-│   │   ├── TrackPage.tsx        # Placeholder (Phase 1)
-│   │   ├── OfficerPage.tsx      # Placeholder (Phase 2)
-│   │   └── NotFoundPage.tsx     # 404 handler with home return link
-│   ├── test/                    # Automated testing suite
-│   │   ├── env.test.ts          # Environment parsing tests
-│   │   ├── navigation.test.tsx  # ARIA, keyboard, and skip link tests
-│   │   ├── responsive.test.tsx  # 360px mobile viewport assertions
-│   │   ├── routes.test.tsx      # Route rendering assertions
-│   │   ├── setup.ts             # Vitest DOM matchers setup
-│   │   └── supabase.test.ts     # Client export and warning tests
-│   ├── types/                   # TypeScript interfaces and stubs
-│   │   └── index.ts
-│   ├── index.css                # Tailwind v4 directives & WCAG AA civic palette
-│   └── main.tsx                 # React DOM mount point
-├── .env.example                 # Environment configuration template
-├── .gitignore                   # Git ignore patterns (.env*, dist, coverage)
-├── .prettierignore
-├── .prettierrc                  # Prettier rules
-├── components.json              # shadcn CLI configuration
-├── eslint.config.js             # ESLint 9 flat configuration
-├── index.html                   # HTML entry template
-├── package.json
-├── tsconfig.app.json
-├── tsconfig.json
-├── tsconfig.node.json
-├── vercel.json                  # SPA routing rewrite for Vercel
-├── vite.config.ts               # Vite configuration (@/ alias, Tailwind v4)
-└── vitest.config.ts             # Vitest test configuration
+```powershell
+npm --prefix server test
+npm --prefix server run test:db
 ```
 
----
+The test suites use disposable fixtures. Never point test tooling at an operational database.
 
-## Deployment Notes
+## Application workflows
 
-### Vercel
+- Residents can submit a complaint without signing in and track progress using its reference.
+- Public ward browsing and tracking return public projections; private reporter contact data and uploaded photographs use protected routes.
+- Staff sign in at `/login`. Sessions use an HttpOnly, SameSite=Lax cookie with CSRF protection on mutations, Origin checks, role and ward authorization, and idle/absolute expiration.
+- `/admin` is restricted to administrators. Administrators can create wards and staff accounts, set an officer's ward, view audit information, and assign complaints.
+- `/officer` is protected. Officers see their own ward's restricted summaries and operational details for complaints assigned to them; only an assigned officer can update a complaint's status.
+- Initial administrator provisioning is a one-time interactive operation described in [the Agra pilot provisioning guide](docs/agra-pilot-provisioning-guide.md). Do not put a password on a command line.
 
-The repository includes `vercel.json` configured with single-page application (SPA) rewrites to `/index.html`:
+## Environment configuration
 
-```json
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
+See [.env.example](.env.example). `VITE_API_URL` is optional; when empty the browser uses the same origin. Production API deployments require `ROADFIX_SECURITY_MODE=production`, at least one exact HTTPS origin in `CORS_ORIGINS`, HTTPS at the user-facing edge, secure cookies, and an explicitly reviewed host/bind and reverse-proxy setup. The repository does not configure TLS termination or production service hosting.
+
+Supabase variables in the example are marked legacy/inactive for the current application. Do not add secrets to `VITE_` variables.
+
+## Database, uploads, and maintenance
+
+The default SQLite file and uploads directory are under `server/data/`. The application creates/opens the database and applies migrations on normal server startup. Do not use the development launcher against pilot data. Protect the data directory and backups with approved Windows volume encryption and least-privilege NTFS permissions before accepting resident information.
+
+Create a complete database-and-photo backup set only while RoadFix and all other SQLite writers are stopped. From the repository root, supply explicit absolute paths and an external destination:
+
+```powershell
+npm --prefix server run db:backup-set -- --database "C:\RoadFix\server\data\roadfix.sqlite" --uploads "C:\RoadFix\server\data\uploads" --directory "E:\RoadFixBackup\Daily" --confirm-server-stopped
 ```
 
-Static assets in `/assets/` and public assets are served directly before routing rewrites.
+The flag is operator attestation; the command does not detect processes. The command creates and verifies a timestamped set with a SHA-256 manifest, but does not encrypt it, copy it to external media, or prune old sets. Read the [Windows operations runbook](docs/roadfix-windows-operations-runbook.md) and [backup protection plan](docs/phase-e-stage-2d-backup-protection-plan.md).
 
-### Continuous Integration (GitHub Actions)
+Integrity check:
 
-The `.github/workflows/ci.yml` pipeline triggers on push and pull requests targeting `main`. It executes:
+```powershell
+npm --prefix server run db:integrity -- "E:\RoadFixBackup\Daily\<backup-set>\database\<database-file>.sqlite"
+```
 
-1. `npm ci` (frozen lockfile validation)
-2. `npm run lint`
-3. `npm run typecheck`
-4. `npm run test`
-5. `npm run build`
+Restore is an offline, serialized, database-only operation. It requires the target overwrite flag if a target already exists and produces a safety backup before displacing an existing target. Restore does not restore uploads; recover the paired `uploads` directory separately. Review every recovery-file warning and do not delete recovery files without checking them. Follow the sign-off and runbook before any operational restore.
 
----
+## Operational status
 
-## Backend (Phase 2A)
+Phase E Stage 1 reported **NOT READY** pending dependency audit completion and operational decisions. The Sharp version was updated, but a complete npm audit could not be verified because registry DNS failed. Windows competing-process lock rehearsal, encryption capability, ACLs, storage locations, retention approvals, data retention policy, and named operational owners still require resolution. Documentation does not itself approve a pilot or establish compliance.
 
-The backend specification and database migrations for RoadFix are defined in SQL files under [`supabase/migrations/`](supabase/migrations/) and documented in detail in [`docs/backend.md`](docs/backend.md).
-
-> [!NOTE]
-> In Phase 2A, the backend consists of offline SQL migrations, pgTAP test suites, and architectural specifications only. No live or remote backend is actively connected to the application, and no real database credentials are configured in the frontend repository.
-
----
-
-## Roadmap
-
-Later phases will be implemented in sequential iterations:
-
-- [x] **Phase 0: Technical Foundation** (Runnable architecture, routing, WCAG AA theme, tests, CI)
-- [ ] **Phase 1: Citizen Pothole Reporting** (Photo upload, geolocation capture, interactive Leaflet map, citizen submission flow)
-- [ ] **Phase 2: Municipal Officer Review Dashboard** (Status transitions, priority triage, field verification, Supabase Auth)
-- [ ] **Phase 3: Public Transparency & Analytics** (Open data exports, resolution statistics, SMS/WhatsApp updates)
+See [pilot operations checklist](docs/roadfix-pilot-operations-checklist.md), [privacy notice draft](docs/citizen-privacy-notice-draft.md), and [provisioning guide](docs/agra-pilot-provisioning-guide.md). The privacy notice is a draft and must not be published until approved.

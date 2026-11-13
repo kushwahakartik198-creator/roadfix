@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import {
   LocateFixed,
   Camera,
@@ -42,7 +42,7 @@ type FormData = {
   reporterName: string;
   reporterContact: string;
   severity: IssueSeverity;
-  photo: string | null; // data URL
+  photos: string[]; // data URLs
 };
 
 const CATEGORIES: { value: IssueCategory; label: string; icon: React.ElementType }[] = [
@@ -61,14 +61,12 @@ const SEVERITIES: { value: IssueSeverity; label: string }[] = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
-  { value: "critical", label: "Critical" },
 ];
 
-const SEVERITY_VARIANT: Record<IssueSeverity, Parameters<typeof Badge>["variant"]> = {
+const SEVERITY_VARIANT: Record<IssueSeverity, BadgeProps["variant"]> = {
   low: "outline",
   medium: "secondary",
   high: "warning",
-  critical: "destructive",
 };
 
 function severityVariant(severity: IssueSeverity) {
@@ -108,6 +106,7 @@ export function ReportPage() {
   const [step, setStep] = useState(1);
   const [wards, setWards] = useState<Ward[]>([]);
   const [wardsLoading, setWardsLoading] = useState(true);
+  const [mapTilesUnavailable, setMapTilesUnavailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormData>({
     wardId: "",
@@ -120,7 +119,7 @@ export function ReportPage() {
     reporterName: "",
     reporterContact: "",
     severity: "medium",
-    photo: null,
+    photos: [],
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [lastRef, setLastRef] = useState<string | null>(null);
@@ -151,8 +150,6 @@ export function ReportPage() {
       if (!form.description || form.description.trim().length < 10) {
         next.description = "Please describe the issue in at least 10 characters.";
       }
-      if (!form.reporterName.trim()) next.reporterName = "Please enter your name.";
-      if (!form.reporterContact.trim()) next.reporterContact = "Please enter a contact number.";
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -178,7 +175,7 @@ export function ReportPage() {
         reporterName: form.reporterName.trim() || null,
         reporterContact: form.reporterContact.trim() || null,
         severity: form.severity,
-        photo: form.photo || undefined,
+        photos: form.photos,
       } as Parameters<typeof api.createIssue>[0];
       const created = await api.createIssue(input);
       setLastRef(created.reference);
@@ -202,7 +199,10 @@ export function ReportPage() {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setField("photo", (reader.result as string) || null);
+    reader.onload = () => {
+      const dataUrl = (reader.result as string) || "";
+      if (dataUrl) setForm((prev) => ({ ...prev, photos: [...prev.photos, dataUrl].slice(0, 3) }));
+    };
     reader.readAsDataURL(file);
   };
 
@@ -237,7 +237,7 @@ export function ReportPage() {
           <CardHeader>
             <CardTitle className="text-lg">Step 1 — Where is the issue?</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Select the ward and drop a pin on the map so your report reaches the right team.
+              Select the ward and set the location. Map tiles load from OpenStreetMap when internet is available.
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -321,6 +321,7 @@ export function ReportPage() {
                   <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution='&copy; OpenStreetMap contributors'
+                    eventHandlers={{ tileerror: () => setMapTilesUnavailable(true) }}
                   />
                   <LocationPicker
                     lat={form.lat}
@@ -337,8 +338,31 @@ export function ReportPage() {
                   </div>
                 </div>
               </div>
+              {mapTilesUnavailable && (
+                <p role="status" className="mt-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-foreground">
+                  Online map tiles are unavailable. The map pin and complaint form still work locally. Enter coordinates below or use the location description; no online map is being shown.
+                </p>
+              )}
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label htmlFor="latitude">Latitude</Label>
+                  <Input id="latitude" type="number" step="any" min="-90" max="90" value={form.lat}
+                    onChange={(event) => {
+                      const value = event.currentTarget.valueAsNumber;
+                      if (Number.isFinite(value) && value >= -90 && value <= 90) setField("lat", value);
+                    }} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="longitude">Longitude</Label>
+                  <Input id="longitude" type="number" step="any" min="-180" max="180" value={form.lng}
+                    onChange={(event) => {
+                      const value = event.currentTarget.valueAsNumber;
+                      if (Number.isFinite(value) && value >= -180 && value <= 180) setField("lng", value);
+                    }} />
+                </div>
+              </div>
               <div className="text-xs text-muted-foreground mt-2">
-                Click the map to place the pin. Coordinates:
+                Click the map or enter coordinates. Coordinates:
                 {form.lat.toFixed(4)}, {form.lng.toFixed(4)}
               </div>
             </div>
@@ -391,7 +415,7 @@ export function ReportPage() {
                     return (
                       <Button
                         key={s.value}
-                        variant={active ? (s.value === "critical" ? "destructive" : "default") : "outline"}
+                        variant={active ? "default" : "outline"}
                         className="w-full text-sm capitalize"
                         onClick={() => setField("severity", s.value)}
                       >
@@ -420,7 +444,8 @@ export function ReportPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Reporter details</Label>
+              <Label>Reporter details (optional)</Label>
+              <p className="text-xs text-muted-foreground">You can report anonymously. These details remain private to authorized staff.</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="reporterName">Your name</Label>
@@ -451,7 +476,7 @@ export function ReportPage() {
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Label htmlFor="photo">Photo (optional)</Label>
-                <span className="text-xs text-muted-foreground">(max 5 MB)</span>
+                <span className="text-xs text-muted-foreground">(up to 3, max 5 MB each)</span>
               </div>
               <div className="border border-border rounded-xl p-4 flex flex-col items-center gap-3 hover:bg-secondary/50 transition-colors relative cursor-pointer">
                 <input
@@ -459,10 +484,14 @@ export function ReportPage() {
                   ref={fileInputRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   className="sr-only"
                   onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handlePhoto(file);
+                    const chosen = Array.from(e.target.files ?? []);
+                    const allowed = Math.max(0, 3 - form.photos.length);
+                    if (chosen.length > allowed) toast.error("A complaint may include at most three photos.");
+                    for (const file of chosen.slice(0, allowed)) handlePhoto(file);
+                    e.target.value = "";
                   }}
                 />
                 <label
@@ -474,30 +503,26 @@ export function ReportPage() {
                   }}
                 >
                   <Camera className="h-5 w-5" aria-hidden="true" />
-                  <span>Upload photo</span>
+                  <span>Upload photos ({form.photos.length}/3)</span>
                 </label>
-                {form.photo && (
-                  <div className="relative group">
-                    <img
-                      src={form.photo}
-                      alt="preview"
-                      className="h-24 w-24 rounded-md object-cover border border-border"
-                    />
+                {form.photos.map((photo, index) => (
+                  <div key={`${photo.slice(0, 32)}-${index}`} className="relative group">
+                    <img src={photo} alt={`Photo preview ${index + 1}`} className="h-24 w-24 rounded-md object-cover border border-border" />
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setField("photo", null);
+                        setForm((prev) => ({ ...prev, photos: prev.photos.filter((_, photoIndex) => photoIndex !== index) }));
                       }}
                     >
                       <X className="h-4 w-4" aria-hidden="true" />
                     </Button>
                   </div>
-                )}
+                ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                One photo max (JPEG/PNG/WebP, up to 5 MB).
+                Up to three JPEG/PNG/WebP photos, 5 MB each. Photos are private to assigned staff.
               </p>
             </div>
           </CardContent>
@@ -550,10 +575,10 @@ export function ReportPage() {
               <p className="text-sm text-foreground whitespace-pre-line">{form.description}</p>
             </div>
 
-            {form.photo && (
+            {form.photos.length > 0 && (
               <div className="bg-secondary/50 p-3 rounded-lg">
-                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Attached photo</div>
-                <img src={form.photo} alt="preview" className="h-24 w-24 rounded-md object-cover border border-border" />
+                <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Attached photos (private to staff)</div>
+                <div className="flex flex-wrap gap-2">{form.photos.map((photo, index) => <img key={`${photo.slice(0, 32)}-${index}`} src={photo} alt={`Attached photo ${index + 1}`} className="h-24 w-24 rounded-md object-cover border border-border" />)}</div>
               </div>
             )}
 

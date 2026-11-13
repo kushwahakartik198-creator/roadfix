@@ -1,13 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { AuthProvider } from "@/features/auth/AuthContext";
 import { routes } from "@/app/router";
 
 function renderWithRoute(initialEntry = "/") {
   const testRouter = createMemoryRouter(routes, {
     initialEntries: [initialEntry],
   });
-  return render(<RouterProvider router={testRouter} />);
+  return render(<AuthProvider><RouterProvider router={testRouter} /></AuthProvider>);
 }
 
 describe("Route Rendering Tests", () => {
@@ -101,8 +102,8 @@ describe("Route Rendering Tests", () => {
   it("renders the working TrackPage at route '/track'", () => {
     renderWithRoute("/track");
 
-    expect(screen.getByRole("heading", { name: /track your report/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/rf-ag-a1b2c3d4/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /track a report/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/rf-ag-xxxxxxxx/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/reference number/i)).toBeInTheDocument();
   });
 
@@ -111,13 +112,6 @@ describe("Route Rendering Tests", () => {
 
     expect(screen.getByRole("heading", { name: /explore wards/i })).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/search wards by name or code…/i)).toBeInTheDocument();
-  });
-
-  it("renders OfficerPage at route '/officer'", () => {
-    renderWithRoute("/officer");
-
-    expect(screen.getByRole("heading", { name: /officer context/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/acting officer/i)).toBeInTheDocument();
   });
 
   it("renders NotFoundPage at unknown route '/does-not-exist'", () => {

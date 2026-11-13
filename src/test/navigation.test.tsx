@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { AuthProvider } from "@/features/auth/AuthContext";
 import { routes } from "@/app/router";
 
 function renderNavigation(initialEntry = "/") {
@@ -10,7 +11,7 @@ function renderNavigation(initialEntry = "/") {
   });
   return {
     user: userEvent.setup(),
-    ...render(<RouterProvider router={router} />),
+    ...render(<AuthProvider><RouterProvider router={router} /></AuthProvider>),
   };
 }
 

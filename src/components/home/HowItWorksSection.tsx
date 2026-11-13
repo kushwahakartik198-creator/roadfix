@@ -1,80 +1,109 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Camera, FileText, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowDown, Check, CircleDot } from "lucide-react";
+import { HeroGraphic, type MarkerId } from "@/components/home/HeroGraphic";
 
-interface StepItem {
-  number: string;
-  title: string;
-  description: string;
-  icon: typeof Camera;
-}
-
-const STEPS: readonly StepItem[] = [
+const JOURNEY = [
   {
+    id: "damage",
     number: "01",
-    title: "Spot and document",
-    description: "Citizens photograph and report potholes.",
-    icon: Camera,
+    label: "Road damage",
+    title: "A road problem comes into view.",
+    body: "A pothole can disrupt a journey and create a hazard for everyone sharing the road.",
+    signal: "ISSUE IDENTIFIED",
   },
-    {
-      number: "02",
-      title: "Submit and track",
-      description:
-        "Citizens receive a complaint reference and can follow its progress ward by ward, from report to resolution.",
-      icon: FileText,
-    },
   {
-    number: "03",
-    title: "Work towards safer roads",
-    description: "Reports can support verification and coordinated maintenance.",
-    icon: ShieldCheck,
+    id: "report",
+    number: "02",
+    label: "Citizen report",
+    title: "A citizen records what they see.",
+    body: "The report form captures a location, description and optional photo to explain the issue.",
+    signal: "REPORT SUBMITTED",
   },
-];
+  {
+    id: "review",
+    number: "03",
+    label: "Municipal review",
+    title: "The complaint reaches a review queue.",
+    body: "A complaint can be checked, assigned and handled through the relevant ward process.",
+    signal: "UNDER REVIEW",
+  },
+  {
+    id: "action",
+    number: "04",
+    label: "Officer action",
+    title: "An officer records the next step.",
+    body: "Assigned staff can update a complaint as work moves forward and add a resolution note.",
+    signal: "WORK IN PROGRESS",
+  },
+  {
+    id: "resolved",
+    number: "05",
+    label: "Resolution",
+    title: "The outcome becomes visible.",
+    body: "Once work is complete, the complaint status can be updated so the reporter can track the result.",
+    signal: "STATUS UPDATED",
+  },
+] as const;
 
 export function HowItWorksSection() {
+  const [activeId, setActiveId] = useState<(typeof JOURNEY)[number]["id"]>(JOURNEY[0].id);
+
+  useEffect(() => {
+    const nodes = document.querySelectorAll<HTMLElement>("[data-city-step]");
+    if (!("IntersectionObserver" in window)) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const mostVisible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (mostVisible) setActiveId(mostVisible.target.getAttribute("data-city-step") as typeof activeId);
+    }, { rootMargin: "-24% 0px -38% 0px", threshold: [0.15, 0.35, 0.6] });
+
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, []);
+
+  const activeStep = JOURNEY.find((step) => step.id === activeId) ?? JOURNEY[0];
+  const activeMarker: MarkerId = activeId === "damage" ? "surface" : activeId === "report" || activeId === "review" ? "location" : "route";
+
   return (
-    <section aria-labelledby="how-it-works-heading" className="relative">
-      <div className="text-center max-w-3xl mx-auto">
-        <h2
-          id="how-it-works-heading"
-          className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-foreground"
-        >
-          How RoadFix works
-        </h2>
-        <p className="mt-3 text-base text-muted-foreground">
-          A clear, citizen-focused path to capturing road damage and following municipal resolution.
-        </p>
-      </div>
-
-      <ol className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 list-none p-0 m-0">
-        {STEPS.map((step) => {
-          const Icon = step.icon;
-          return (
-            <li key={step.number} className="h-full">
-              <Card variant="interactive" className="h-full flex flex-col p-6">
-                <CardContent className="p-0 flex flex-col flex-1">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-                      <Icon className="h-6 w-6" aria-hidden="true" />
-                    </div>
-                    <span
-                      className="text-xs font-bold tracking-wider text-muted-foreground font-mono-tech px-2.5 py-1 rounded bg-secondary border border-border"
-                      aria-hidden="true"
-                    >
-                      {step.number}
-                    </span>
-                  </div>
-
-                  <h3 className="text-lg font-bold text-foreground tracking-tight">{step.title}</h3>
-
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed flex-1">
-                    {step.description}
-                  </p>
-                </CardContent>
-              </Card>
+    <section id="city-journey" aria-labelledby="how-it-works-heading" className="city-journey">
+      <header className="city-journey__heading">
+        <p className="living-kicker"><span className="living-kicker__line" /> ONE REPORT / A CLEARER ROUTE</p>
+        <h2 id="how-it-works-heading">From road damage<br /><em>to recorded repair.</em></h2>
+        <p>This illustrative journey shows how a road complaint can move through RoadFix. It is not a live case or a claim that every report is resolved.</p>
+      </header>
+      <div className="city-journey__layout">
+        <ol className="city-journey__steps">
+          {JOURNEY.map((step, index) => (
+            <li key={step.id} data-city-step={step.id} className={`city-journey__step${activeId === step.id ? " is-active" : ""}`}>
+              <button
+                className="city-journey__step-button"
+                type="button"
+                aria-pressed={activeId === step.id}
+                aria-label={`Show journey stage ${step.number}: ${step.label}`}
+                onClick={() => setActiveId(step.id)}
+              >
+                <span className="city-journey__number">{step.number}</span>
+                <span className="city-journey__step-copy">
+                  <span className="city-journey__label">{step.label}</span>
+                  <strong>{step.title}</strong>
+                  <span className="city-journey__description">{step.body}</span>
+                </span>
+                <span className="city-journey__step-icon" aria-hidden="true">{index < JOURNEY.findIndex((item) => item.id === activeId) ? <Check /> : <CircleDot />}</span>
+              </button>
+              {index < JOURNEY.length - 1 && <span className="city-journey__connector" aria-hidden="true"><ArrowDown /></span>}
             </li>
-          );
-        })}
-      </ol>
+          ))}
+        </ol>
+        <aside className="city-journey__visual" aria-label={`City model showing ${activeStep.label.toLowerCase()}`}>
+          <HeroGraphic activeMarker={activeMarker} />
+          <div className="city-journey__stage" aria-live="polite">
+            <span>JOURNEY STAGE / {activeStep.number}</span>
+            <strong>{activeStep.signal}</strong>
+          </div>
+        </aside>
+      </div>
     </section>
   );
 }

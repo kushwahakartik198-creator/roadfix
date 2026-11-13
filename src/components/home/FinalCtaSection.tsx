@@ -1,51 +1,26 @@
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ArrowRight, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function FinalCtaSection() {
   return (
-    <section aria-labelledby="final-cta-heading" className="relative pb-8 sm:pb-12">
-      <Card className="relative overflow-hidden border border-border bg-gradient-to-b from-card to-background p-8 sm:p-12 text-center shadow-glow">
-        <CardContent className="p-0 max-w-3xl mx-auto flex flex-col items-center">
-          <h2
-            id="final-cta-heading"
-            className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground"
-          >
-            Every safer road starts with a report.
-          </h2>
-
-          <p className="mt-4 text-base text-muted-foreground max-w-xl">
-            Help build a transparent, verifiable record of road hazards to assist municipal teams in
-            prioritizing road repairs.
-          </p>
-
-          <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 w-full sm:w-auto">
-            <Button
-              asChild
-              size="lg"
-              className="min-h-[48px] px-8 text-base font-semibold shadow-glow"
-            >
-              <Link to="/report" className="inline-flex items-center justify-center gap-2">
-                <span>Report a pothole</span>
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            </Button>
-
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="min-h-[48px] px-8 text-base font-medium"
-            >
-              <Link to="/track" className="inline-flex items-center justify-center gap-2">
-                <Search className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                <span>Track your complaint</span>
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+    <section className="living-close" aria-labelledby="final-cta-heading">
+      <div className="living-close__grid" aria-hidden="true" />
+      <div className="living-close__content">
+        <p className="living-kicker"><span className="living-kicker__line" /> THE NEXT STEP STARTS HERE</p>
+        <h2 id="final-cta-heading">Know a road<br /><em>that needs attention?</em></h2>
+        <p>Share the location and details so the issue can be reviewed and followed.</p>
+        <div className="living-hero__actions living-close__actions">
+          <Button asChild size="lg" className="living-button living-button--primary">
+            <Link to="/report"><span>Report a Pothole</span><ArrowRight aria-hidden="true" /></Link>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="living-button living-button--secondary">
+            <Link to="/track"><Search aria-hidden="true" /><span>Track Complaint</span></Link>
+          </Button>
+        </div>
+      </div>
+      <div className="living-close__signal" aria-hidden="true"><span>RF</span><i /><i /><i /></div>
+      <span className="living-close__edge" aria-hidden="true">ROADFIX / REPORT · TRACK · REPAIR</span>
     </section>
   );
 }

@@ -1,135 +1,65 @@
-/**
- * RoadFix Local Server — HTTP layer
- *
- * Zero-dependency Node.js server backed by a file-based store.
- * Powers the fully-working user-facing features of RoadFix:
- * ward-aware reporting, ward-based issue listing, officer triage, and public tracking.
- */
 import http from "node:http";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { join, dirname } from "node:path";
-import { fileURLToPath } from "node:url";
-import { URL } from "node:url";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { openDatabase } from "./db/database.js";
+import { createApiHandler } from "./api.js";
+import { createSecurityConfig } from "./security-config.js";
 
-import { Store } from "./store.js";
-import { createWardRouter } from "./routes/wards.js";
-import { createIssueRouter } from "./routes/issues.js";
-import { createOfficerRouter } from "./routes/officers.js";
-import { createUploadsRouter } from "./routes/uploads.js";
-import { createStatsRouter } from "./routes/stats.js";
-import { seedStore } from "./seed.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, "..", "data");
-const STORE_PATH = join(DATA_DIR, "store.json");
-const UPLOADS_DIR = join(DATA_DIR, "uploads");
-
-const PORT = Number(process.env.PORT) || 4000;
-const HOST = process.env.HOST || "0.0.0.0";
-
-function ensureDirs() {
-  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-  if (!existsSync(UPLOADS_DIR)) mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-function loadStore() {
-  if (existsSync(STORE_PATH)) {
-    try {
-      const raw = readFileSync(STORE_PATH, "utf-8");
-      return JSON.parse(raw);
-    } catch {
-      // Fall back to seed on corrupt store
-    }
-  }
-  return seedStore();
-}
-
-function persist(store) {
-  writeFileSync(STORE_PATH, JSON.stringify(store.snapshot(), null, 2));
-}
-
-function main() {
-  ensureDirs();
-  const store = new Store(loadStore());
-  persist(store);
-
-  const server = http.createServer(async (req, res) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Officer-Id, Authorization");
-    res.setHeader("Access-Control-Expose-Headers", "X-Total-Count, X-Page, X-Page-Size");
-
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
-
-    const persistAndRespond = (status, body) => {
-      // GET requests must not update store.json. Vite watches this workspace,
-      // so rewriting the file for every read would trigger a page reload and
-      // create a request/reload loop.
-      if (req.method !== "GET" && req.method !== "OPTIONS") {
-        try {
-          persist(store);
-        } catch {
-          /* ignore */
-        }
-      }
-      res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify(body));
-    };
-
-    // Health
-    if (url.pathname === "/api/health" && req.method === "GET") {
-      res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: true, service: "roadfix-local-server", port: PORT }));
-      return;
-    }
-
-    try {
-      const matchers = [
-        createWardRouter(store, persistAndRespond),
-        createStatsRouter(store, persistAndRespond),
-        createOfficerRouter(store, persistAndRespond),
-        createIssueRouter(store, persistAndRespond),
-        createUploadsRouter(store, persistAndRespond, UPLOADS_DIR),
-      ];
-
-      for (const matcher of matchers) {
-        const handled = await matcher(req, res, url);
-        if (handled) return;
-      }
-
-      // 404
-      res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: false, error: `Not found: ${req.method} ${url.pathname}` }));
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: false, error: message }));
-    }
+export function createRoadFixServer({ db, host = process.env.HOST || "127.0.0.1", port = Number(process.env.PORT) || 4000, uploadsRoot, securityConfig } = {}) {
+  const security = createSecurityConfig({
+    mode: securityConfig?.mode,
+    corsOrigins: securityConfig?.origins?.join(","),
+    host: securityConfig?.host ?? host,
   });
-
-  server.listen(PORT, HOST, () => {
-    console.log(`[RoadFix] Local server running at http://${HOST}:${PORT}`);
-    console.log(`[RoadFix] Store file: ${STORE_PATH}`);
-    console.log(`[RoadFix] Uploads dir: ${UPLOADS_DIR}`);
-  });
-
-  // Graceful shutdown
-  const shutdown = () => {
-    try {
-      persist(store);
-    } catch {
-      /* ignore */
-    }
-    server.close(() => process.exit(0));
+  const connection = db ?? openDatabase();
+  const server = http.createServer(createApiHandler({ db: connection, uploadsRoot, securityConfig: security }));
+  return {
+    server,
+    db: connection,
+    host,
+    port,
+    listen() {
+      return new Promise((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(port, host, () => {
+          server.off("error", reject);
+          console.log(`[RoadFix] SQLite API running at http://${host}:${port}`);
+          resolve(server);
+        });
+      });
+    },
+    close() {
+      return new Promise((resolve, reject) => {
+        server.close((error) => {
+          try { connection.close(); } catch (closeError) { reject(closeError); return; }
+          if (error) reject(error); else resolve();
+        });
+      });
+    },
   };
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
 }
 
-main();
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
+if (isMain) {
+  let app;
+  try {
+    app = createRoadFixServer();
+    await app.listen();
+  } catch (error) {
+    console.error("RoadFix server startup failed", error);
+    process.exitCode = 1;
+  }
+  if (app) {
+    let shuttingDown = false;
+    const shutdown = () => {
+      if (shuttingDown) return;
+      shuttingDown = true;
+      app.close().then(() => process.exit(0), (error) => {
+        console.error("RoadFix shutdown failed", error);
+        process.exit(1);
+      });
+    };
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
+  }
+}

@@ -8,14 +8,15 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MapPin, Filter, Clock, ChevronRight, Loader2 } from "lucide-react";
-import { api, type Issue } from "@/lib/api";
+import { api, type PublicIssueCard, type IssueStatus, type IssueSeverity } from "@/lib/api";
 
-const STATUS_BADGE: Record<string, Parameters<typeof Badge>["variant"]> = {
-  reported: "secondary",
+const STATUS_BADGE: Record<string, BadgeProps["variant"]> = {
+  submitted: "secondary",
+  under_review: "info",
   verified: "info",
   in_progress: "warning",
   resolved: "success",
@@ -23,19 +24,20 @@ const STATUS_BADGE: Record<string, Parameters<typeof Badge>["variant"]> = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  reported: "Reported",
+  submitted: "Submitted",
+  under_review: "Under review",
   verified: "Verified",
   in_progress: "In Progress",
   resolved: "Resolved",
   rejected: "Rejected",
 };
 
-const STATUS_ORDER = ["reported", "verified", "in_progress", "resolved", "rejected"] as const;
+const STATUS_ORDER: IssueStatus[] = ["submitted", "under_review", "verified", "in_progress", "resolved", "rejected"];
 
 export function WardDetailPage() {
   const { wardId } = useParams();
   const [ward, setWard] = useState<{ id: string; name: string; code: string } | null>(null);
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issues, setIssues] = useState<PublicIssueCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterSeverity, setFilterSeverity] = useState<string | null>(null);
@@ -65,7 +67,6 @@ export function WardDetailPage() {
       const s = q.toLowerCase();
       return (
         i.title.toLowerCase().includes(s) ||
-        i.description.toLowerCase().includes(s) ||
         (i.locationDescription ?? "").toLowerCase().includes(s) ||
         i.reference.toLowerCase().includes(s)
       );
@@ -74,7 +75,8 @@ export function WardDetailPage() {
   });
 
   const counts = {
-    reported: issues.filter((i) => i.status === "reported").length,
+    submitted: issues.filter((i) => i.status === "submitted").length,
+    under_review: issues.filter((i) => i.status === "under_review").length,
     verified: issues.filter((i) => i.status === "verified").length,
     in_progress: issues.filter((i) => i.status === "in_progress").length,
     resolved: issues.filter((i) => i.status === "resolved").length,
@@ -114,7 +116,7 @@ export function WardDetailPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    {([["reported", counts.reported], ["in_progress", counts.in_progress], ["resolved", counts.resolved]] as const).map(
+                    {([["submitted", counts.submitted], ["in_progress", counts.in_progress], ["resolved", counts.resolved]] as const).map(
                       ([status, count]) => (
                         <div key={status} className="p-3 rounded-lg bg-secondary/50">
                           <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
@@ -155,7 +157,7 @@ export function WardDetailPage() {
                       <span className="text-xs font-semibold uppercase tracking-wider">Filter by severity</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
-                      {["low", "medium", "high", "critical"].map((s) => (
+                      {(["low", "medium", "high"] as IssueSeverity[]).map((s) => (
                         <Button
                           key={s}
                           variant={filterSeverity === s ? "default" : "outline"}
@@ -205,8 +207,8 @@ export function WardDetailPage() {
               ) : (
                 <div className="space-y-3">
                   {filtered.map((issue) => (
-                    <Card key={issue.id} variant="interactive" asChild className="hover:border-primary/50">
-                      <Link to={`/track?q=${issue.reference}`}>
+                    <Card key={issue.id} variant="interactive" className="hover:border-primary/50">
+                      <Link className="block" to={`/track?q=${issue.reference}`}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1 min-w-0">
@@ -224,7 +226,7 @@ export function WardDetailPage() {
                               <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                                 <span className="font-mono-tech">{issue.reference}</span>
                                 <span>&bull;</span>
-                                <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
+                                <span>{new Date(issue.submittedAt).toLocaleDateString()}</span>
                               </div>
                             </div>
                             <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />

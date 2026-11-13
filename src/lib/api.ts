@@ -1,288 +1,171 @@
-/**
- * RoadFix — API client for the local Node.js server.
- *
- * All requests go to the local RoadFix server (default http://localhost:4000).
- * Override with VITE_API_URL when deployed elsewhere. This client replaces the
- * Supabase client for the fully-working local data layer (no mock/fallback data).
- */
+/** Typed client for the local RoadFix API. Browser credentials are HttpOnly cookies. */
 
-const BASE_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:4000").replace(/\/$/, "");
+const BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+let csrfToken: string | null = null;
+let sessionExpiredHandler: (() => void) | null = null;
 
 export interface ApiError extends Error {
   status?: number;
   body?: unknown;
+  retryAfter?: number;
 }
 
-/** Server wraps every successful response as { ok: true, data: <payload> }. */
-async function json<T>(res: Response): Promise<T> {
-  const text = await res.text();
-  if (!text) return null as unknown as T;
-  const parsed = JSON.parse(text);
-  if (parsed && parsed.ok === true && Object.prototype.hasOwnProperty.call(parsed, "data")) {
-    return parsed.data as T;
+export function setCsrfToken(token: string | null) { csrfToken = token; }
+export function setSessionExpiredHandler(handler: (() => void) | null) { sessionExpiredHandler = handler; }
+
+async function unwrap<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text) return null as T;
+  const payload = JSON.parse(text) as { ok?: boolean; data?: T };
+  if (payload?.ok === true && Object.hasOwn(payload, "data")) return payload.data as T;
+  return payload as T;
+}
+
+async function request<T>(path: string, init: RequestInit = {}, requiresSession = false): Promise<T> {
+  const headers = new Headers(init.headers);
+  if (init.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
+  const method = (init.method ?? "GET").toUpperCase();
+  if (!["GET", "HEAD", "OPTIONS"].includes(method) && csrfToken && !headers.has("X-CSRF-Token")) {
+    headers.set("X-CSRF-Token", csrfToken);
   }
-  return parsed as T;
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
-
-  if (!res.ok) {
-    const err: ApiError = new Error(`API error ${res.status}: ${res.statusText}`) as ApiError;
-    err.status = res.status;
-    try {
-      err.body = await res.json();
-    } catch {
-      /* ignore non-JSON error bodies */
-    }
-    throw err;
+  const response = await fetch(`${BASE_URL}${path}`, { ...init, headers, credentials: "include" });
+  if (!response.ok) {
+    let body: unknown;
+    try { body = await response.json(); } catch { body = undefined; }
+    const message = typeof body === "object" && body && "error" in body && typeof body.error === "string"
+      ? body.error
+      : `Request failed (${response.status})`;
+    const error: ApiError = new Error(message);
+    error.status = response.status;
+    error.body = body;
+    if (response.status === 401 && requiresSession) sessionExpiredHandler?.();
+    const retryAfter = Number(response.headers.get("Retry-After"));
+    if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfter = retryAfter;
+    throw error;
   }
-
-  return json<T>(res);
+  return unwrap<T>(response);
 }
 
-/** ---------- Domain types (mirrors the local server schema) ---------- */
+export type UserRole = "officer" | "admin";
+export type IssueStatus = "submitted" | "under_review" | "verified" | "in_progress" | "resolved" | "rejected";
+export type IssueSeverity = "low" | "medium" | "high";
+export type IssueCategory = "pothole" | "waterlogging" | "open_manhole" | "streetlight" | "garbage" | "erosion" | "water_pipe_leak" | "damaged_sign" | "other";
+
+export interface AuthUser {
+  id: string;
+  email?: string;
+  displayName: string | null;
+  role: UserRole;
+  officerId: string | null;
+  wardId: string | null;
+}
+export interface AuthSession { user: AuthUser; csrfToken: string; expiresAt: string; }
 
 export interface Ward {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  lat: number;
-  lng: number;
-  active: boolean;
-  wardNumber: string;
-  createdAt?: string;
+  id: string; code: string; name: string; description: string | null;
+  lat: number; lng: number; active: boolean; wardNumber: string; createdAt?: string;
 }
-
 export interface Officer {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  role: string;
-  wardId: string | null;
-  active: boolean;
-  createdAt?: string;
+  id: string; displayName: string | null; wardId: string | null; active: boolean;
 }
-
-export type IssueStatus = "reported" | "verified" | "in_progress" | "resolved" | "rejected";
-export type IssueCategory =
-  | "pothole"
-  | "waterlogging"
-  | "open_manhole"
-  | "streetlight"
-  | "garbage"
-  | "erosion"
-  | "water_pipe_leak"
-  | "damaged_sign"
-  | "other";
-export type IssueSeverity = "low" | "medium" | "high" | "critical";
-
-export interface Issue {
-  id: string;
-  reference: string;
-  title: string;
-  description: string;
-  category: IssueCategory;
-  status: IssueStatus;
-  severity: IssueSeverity;
-  wardId: string;
-  locationDescription: string | null;
-  lat: number;
-  lng: number;
-  reporterName: string;
-  reporterContact: string | null;
-  reporterId: string | null;
-  assignedOfficerId: string | null;
-  assignedAt: string | null;
-  rejectionReason: string | null;
-  resolutionNote: string | null;
-  resolvedAt: string | null;
-  photoUrl: string | null;
-  createdAt: string;
-  updatedAt: string;
+export interface PublicIssueCard {
+  id: string; reference: string; title: string; category: IssueCategory;
+  status: IssueStatus; severity: IssueSeverity | null; wardId: string;
+  locationDescription: string | null; submittedAt: string; lastUpdatedAt?: string;
 }
-
-export interface IssueHistory {
-  id: string;
-  issueId: string;
-  eventType: "created" | "status_change" | "assignment" | "note" | "reopened";
-  fromStatus: IssueStatus | null;
-  toStatus: IssueStatus | null;
-  actorId: string | null;
-  actorRole: string | null;
-  note: string | null;
-  createdAt: string;
+export interface PublicIssue extends PublicIssueCard { lastUpdatedAt: string; }
+export interface PublicTrack {
+  reference: string; status: IssueStatus; submittedAt: string;
+  lastUpdatedAt: string; locationDescription: string | null;
 }
-
-export interface PagedResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
+export interface PublicHistory {
+  eventType: "created" | "status_change" | "assignment" | "reopened" | "note";
+  fromStatus: IssueStatus | null; toStatus: IssueStatus | null; createdAt: string;
 }
-
-/** ---------- Wards ---------- */
-
-export async function listWards(params?: { q?: string; active?: string }): Promise<Ward[]> {
-  const qs = new URLSearchParams();
-  if (params?.q) qs.set("q", params.q);
-  if (params?.active !== undefined) qs.set("active", params.active);
-  return request<Ward[]>(`/api/wards${qs.toString() ? `?${qs}` : ""}`);
+export interface OperationalIssue {
+  id: string; reference: string; title: string; description: string;
+  category: IssueCategory; status: IssueStatus; severity: IssueSeverity | null;
+  wardId: string; locationDescription: string | null; lat: number; lng: number;
+  assignedOfficerId: string | null; assignedAt: string | null;
+  rejectionReason: string | null; resolutionNote: string | null; resolvedAt: string | null;
+  createdAt: string; updatedAt: string;
 }
-
-export async function getWard(id: string): Promise<Ward> {
-  return request<Ward>(`/api/wards/${encodeURIComponent(id)}`);
+export interface RestrictedOfficerIssue {
+  reference: string; status: IssueStatus; category: IssueCategory; wardId: string; submittedAt: string;
 }
-
-export async function listWardIssues(
-  wardId: string,
-  params?: { status?: string; severity?: string; page?: number; pageSize?: number }
-): Promise<PagedResult<Issue>> {
-  const qs = new URLSearchParams();
-  if (params?.status) qs.set("status", params.status);
-  if (params?.severity) qs.set("severity", params.severity);
-  if (params?.page) qs.set("page", String(params.page));
-  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
-  return request<PagedResult<Issue>>(`/api/wards/${encodeURIComponent(wardId)}/issues?${qs}`);
+export type OfficerIssue = OperationalIssue | RestrictedOfficerIssue;
+export interface PagedResult<T> { data: T[]; total: number; page: number; pageSize: number; }
+export interface AdminAccount {
+  id: string; email: string; role: UserRole; displayName: string | null;
+  active: boolean; officerId: string | null; wardId: string | null; officerActive: boolean | null;
 }
-
-/** ---------- Issues ---------- */
-
-export interface IssueListParams {
-  wardId?: string;
-  status?: IssueStatus;
-  severity?: IssueSeverity;
-  category?: IssueCategory;
-  assignedOfficerId?: string;
-  q?: string;
-  page?: number;
-  pageSize?: number;
-  sort?: string;
-  dir?: "asc" | "desc";
+export interface AuditEntry {
+  id: number; actorUserId: string | null; actorName: string | null; actorRole: string;
+  action: string; targetComplaintId: string | null; targetUserId: string | null; createdAt: string;
 }
-
-export async function listIssues(params?: IssueListParams): Promise<PagedResult<Issue>> {
-  const qs = new URLSearchParams();
-  if (params?.wardId) qs.set("wardId", params.wardId);
-  if (params?.status) qs.set("status", params.status);
-  if (params?.severity) qs.set("severity", params.severity);
-  if (params?.category) qs.set("category", params.category);
-  if (params?.assignedOfficerId) qs.set("assignedOfficerId", params.assignedOfficerId);
-  if (params?.q) qs.set("q", params.q);
-  if (params?.page) qs.set("page", String(params.page));
-  if (params?.pageSize) qs.set("pageSize", String(params.pageSize));
-  if (params?.sort) qs.set("sort", params.sort);
-  if (params?.dir) qs.set("dir", params.dir);
-  return request<PagedResult<Issue>>(`/api/issues?${qs}`);
-}
-
-export async function getIssue(id: string): Promise<Issue> {
-  return request<Issue>(`/api/issues/${encodeURIComponent(id)}`);
-}
-
-export async function trackIssue(reference: string): Promise<Issue> {
-  return request<Issue>(`/api/issues/${encodeURIComponent(reference)}/track`);
-}
-
-export async function getIssueHistory(id: string): Promise<IssueHistory[]> {
-  return request<IssueHistory[]>(`/api/issues/${encodeURIComponent(id)}/history`);
-}
+export interface ComplaintPhoto { id: string; contentType: string; sizeBytes: number; createdAt: string; }
+export interface Stats { total: number; byStatus: Record<IssueStatus, number>; bySeverity: Record<IssueSeverity, number>; byWard: { name: string; count: number }[]; }
 
 export interface CreateIssueInput {
-  wardId: string;
-  category: IssueCategory;
-  description: string;
-  lat: number;
-  lng: number;
-  locationDescription?: string;
-  reporterName?: string;
-  reporterContact?: string;
-  severity?: IssueSeverity;
-  title?: string;
-  photo?: string; // data URL
+  wardId: string; category: IssueCategory; description: string; lat: number; lng: number;
+  locationDescription?: string; reporterName?: string; reporterContact?: string;
+  severity?: IssueSeverity; title?: string; photo?: string; photos?: string[];
 }
 
-export async function createIssue(input: CreateIssueInput): Promise<Issue> {
-  return request<Issue>("/api/issues", {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-}
-
-export interface TransitionIssueInput {
-  status?: IssueStatus;
-  severity?: IssueSeverity;
-  note?: string;
-}
-
-export async function transitionIssue(
-  id: string,
-  input: TransitionIssueInput,
-  officerId: string
-): Promise<Issue> {
-  return request<Issue>(`/api/issues/${encodeURIComponent(id)}`, {
-    method: "PATCH",
-    headers: { "X-Officer-Id": officerId },
-    body: JSON.stringify(input),
-  });
-}
-
-export async function assignIssue(id: string, officerId: string, actorId: string): Promise<Issue> {
-  return request<Issue>(`/api/issues/${encodeURIComponent(id)}/assign`, {
-    method: "POST",
-    headers: { "X-Officer-Id": actorId },
-    body: JSON.stringify({ officerId }),
-  });
-}
-
-/** ---------- Officers ---------- */
-
-export async function listOfficers(params?: { q?: string; wardId?: string; active?: string }): Promise<Officer[]> {
-  const qs = new URLSearchParams();
-  if (params?.q) qs.set("q", params.q);
-  if (params?.wardId) qs.set("wardId", params.wardId);
-  if (params?.active !== undefined) qs.set("active", params.active);
-  return request<Officer[]>(`/api/officers${qs.toString() ? `?${qs}` : ""}`);
-}
-
-export async function getOfficer(id: string): Promise<Officer> {
-  return request<Officer>(`/api/officers/${encodeURIComponent(id)}`);
-}
-
-/** ---------- Stats ---------- */
-
-export interface Stats {
-  total: number;
-  byStatus: Record<string, number>;
-  bySeverity: Record<string, number>;
-  byWard: { name: string; count: number }[];
-}
-
-export async function getStats(): Promise<Stats> {
-  return request<Stats>("/api/stats");
-}
-
-/** Convenience client used by the page components. */
-export const api = {
-  listWards,
-  getWard,
-  listWardIssues,
-  listIssues,
-  getIssue,
-  trackIssue,
-  getIssueHistory,
-  createIssue,
-  transitionIssue,
-  assignIssue,
-  listOfficers,
-  getOfficer,
-  getStats,
+const query = (values: Record<string, string | number | undefined>) => {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) if (value !== undefined && value !== "") search.set(key, String(value));
+  return search.toString();
 };
+
+export const api = {
+  login: (email: string, password: string) => request<AuthSession>("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  getSession: () => request<AuthSession>("/api/auth/session"),
+  logout: () => request<{ loggedOut: boolean }>("/api/auth/logout", { method: "POST", body: JSON.stringify({}) }),
+
+  listWards: (params?: { q?: string; active?: string }) => request<Ward[]>(`/api/wards${query(params ?? {}) ? `?${query(params ?? {})}` : ""}`),
+  getWard: (id: string) => request<Ward>(`/api/wards/${encodeURIComponent(id)}`),
+  listWardIssues: (wardId: string, params?: { status?: IssueStatus; severity?: IssueSeverity; page?: number; pageSize?: number }) =>
+    request<PagedResult<PublicIssueCard>>(`/api/wards/${encodeURIComponent(wardId)}/issues${query(params ?? {}) ? `?${query(params ?? {})}` : ""}`),
+  listIssues: (params?: { wardId?: string; status?: IssueStatus; severity?: IssueSeverity; category?: IssueCategory; q?: string; page?: number; pageSize?: number }) =>
+    request<PagedResult<OperationalIssue>>(`/api/issues${query(params ?? {}) ? `?${query(params ?? {})}` : ""}`, {}, true),
+  listOfficerIssues: (params?: { wardId?: string; status?: IssueStatus; category?: IssueCategory; q?: string; page?: number; pageSize?: number }) =>
+    request<PagedResult<OfficerIssue>>(`/api/issues${query(params ?? {}) ? `?${query(params ?? {})}` : ""}`, {}, true),
+  getIssue: (id: string) => request<PublicIssue>(`/api/issues/${encodeURIComponent(id)}`),
+  trackIssue: (reference: string) => request<PublicTrack>(`/api/issues/${encodeURIComponent(reference)}/track`),
+  getIssueHistory: (reference: string) => request<PublicHistory[]>(`/api/issues/${encodeURIComponent(reference)}/track/history`),
+  createIssue: (input: CreateIssueInput) => request<{ id: string; reference: string; status: IssueStatus; title: string }>("/api/issues", { method: "POST", body: JSON.stringify(input) }),
+  transitionIssue: (id: string, input: { status: IssueStatus; severity?: IssueSeverity; note?: string }) => request<OperationalIssue>(`/api/issues/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) }, true),
+  assignIssue: (id: string, officerId: string) => request<OperationalIssue>(`/api/issues/${encodeURIComponent(id)}/assign`, { method: "POST", body: JSON.stringify({ officerId }) }, true),
+  getReporterContact: (id: string) => request<{ reporterName: string | null; reporterContact: string | null } | null>(`/api/issues/${encodeURIComponent(id)}/reporter-contact`, {}, true),
+  listComplaintPhotos: (id: string) => request<ComplaintPhoto[]>(`/api/issues/${encodeURIComponent(id)}/photos`, {}, true),
+  async getComplaintPhoto(id: string, photoId: string): Promise<Blob> {
+    const response = await fetch(`${BASE_URL}/api/issues/${encodeURIComponent(id)}/photos/${encodeURIComponent(photoId)}`, { credentials: "include" });
+    if (!response.ok) {
+      if (response.status === 401) sessionExpiredHandler?.();
+      throw apiErrorFromResponse(response);
+    }
+    return response.blob();
+  },
+
+  listOfficers: (params?: { q?: string; wardId?: string; active?: string }) => request<Officer[]>(`/api/officers${query(params ?? {}) ? `?${query(params ?? {})}` : ""}`),
+  getStats: () => request<Stats>("/api/stats"),
+  createWard: (input: { name: string; code: string; wardNumber: string; description?: string; lat: number; lng: number }) => request<Ward>("/api/wards", { method: "POST", body: JSON.stringify(input) }, true),
+
+  listAdminAccounts: () => request<AdminAccount[]>("/api/admin/accounts", {}, true),
+  createStaffAccount: (input: { email: string; password: string; displayName: string; role: UserRole; wardId?: string }) => request<AdminAccount>("/api/admin/accounts", { method: "POST", body: JSON.stringify(input) }, true),
+  setAccountActive: (id: string, active: boolean) => request<{ updated: boolean }>(`/api/admin/accounts/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ active }) }, true),
+  setOfficerWard: (id: string, wardId: string | null) => request<{ updated: boolean }>(`/api/admin/accounts/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ wardId }) }, true),
+  listAdminAudit: () => request<AuditEntry[]>("/api/admin/audit", {}, true),
+};
+
+async function apiErrorFromResponse(response: Response): Promise<ApiError> {
+  let body: unknown;
+  try { body = await response.json(); } catch { body = undefined; }
+  const message = typeof body === "object" && body && "error" in body && typeof body.error === "string" ? body.error : `Request failed (${response.status})`;
+  const error: ApiError = new Error(message);
+  error.status = response.status; error.body = body;
+  const retryAfter = Number(response.headers.get("Retry-After"));
+  if (Number.isFinite(retryAfter) && retryAfter > 0) error.retryAfter = retryAfter;
+  return error;
+}

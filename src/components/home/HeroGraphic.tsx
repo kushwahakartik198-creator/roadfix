@@ -1,168 +1,209 @@
-export function HeroGraphic() {
+import { useEffect, useId, useState } from "react";
+import { Pause, Play } from "lucide-react";
+
+const MARKERS = [
+  {
+    id: "surface",
+    label: "Road surface",
+    detail: "A clear photo and mapped location help describe a road issue.",
+    x: "47%",
+    y: "61%",
+  },
+  {
+    id: "location",
+    label: "Location signal",
+    detail: "Location helps connect a report with the road and ward it concerns.",
+    x: "69%",
+    y: "39%",
+  },
+  {
+    id: "route",
+    label: "Repair route",
+    detail: "A complaint can be followed as it moves through review and action.",
+    x: "28%",
+    y: "72%",
+  },
+] as const;
+
+export type MarkerId = (typeof MARKERS)[number]["id"];
+
+const BUILDINGS = [
+  { x: 52, y: 209, w: 62, h: 100, d: 20, tone: 0 },
+  { x: 137, y: 166, w: 74, h: 143, d: 22, tone: 1 },
+  { x: 232, y: 203, w: 58, h: 106, d: 19, tone: 2 },
+  { x: 318, y: 135, w: 78, h: 174, d: 24, tone: 1 },
+  { x: 416, y: 187, w: 58, h: 122, d: 18, tone: 0 },
+  { x: 494, y: 151, w: 78, h: 158, d: 22, tone: 2 },
+  { x: 604, y: 208, w: 62, h: 101, d: 18, tone: 1 },
+  { x: 683, y: 170, w: 75, h: 139, d: 23, tone: 0 },
+  { x: 784, y: 216, w: 58, h: 93, d: 18, tone: 2 },
+  { x: 94, y: 290, w: 52, h: 79, d: 18, tone: 2 },
+  { x: 211, y: 276, w: 59, h: 93, d: 17, tone: 1 },
+  { x: 376, y: 273, w: 64, h: 96, d: 18, tone: 0 },
+  { x: 552, y: 278, w: 57, h: 91, d: 18, tone: 2 },
+  { x: 715, y: 279, w: 62, h: 90, d: 17, tone: 1 },
+] as const;
+
+function Building({
+  x,
+  y,
+  w,
+  h,
+  d,
+  tone,
+}: (typeof BUILDINGS)[number]) {
+  const front = ["#15243a", "#192a40", "#101e32"][tone];
+  const side = ["#0d1829", "#112035", "#0b1727"][tone];
+  const roof = ["#304258", "#354a60", "#25374d"][tone];
+  const rows = Math.max(2, Math.floor(h / 19));
+  const columns = Math.max(2, Math.floor(w / 16));
+
   return (
-    <div className="relative w-full max-w-[500px] select-none mx-auto">
-      {/* Decorative ambient radial backdrop */}
-      <div
-        className="absolute inset-0 bg-primary/10 blur-3xl rounded-full -z-10 pointer-events-none transform-gpu animate-ambient-glow"
-        aria-hidden="true"
-      />
-
-      <svg
-        viewBox="0 0 540 460"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-auto overflow-visible drop-shadow-xl"
-        aria-hidden="true"
-        focusable="false"
-        role="presentation"
-      >
-        <defs>
-          {/* Radial ambient glow */}
-          <radialGradient id="heroOrangeAmbient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-            <stop offset="0%" stopColor="#F97316" stopOpacity="0.3" />
-            <stop offset="70%" stopColor="#F97316" stopOpacity="0.05" />
-            <stop offset="100%" stopColor="#F97316" stopOpacity="0" />
-          </radialGradient>
-
-          {/* Road gradient */}
-          <linearGradient id="roadOrangeGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#F59E0B" />
-            <stop offset="50%" stopColor="#F97316" />
-            <stop offset="100%" stopColor="#FBBF24" />
-          </linearGradient>
-
-          {/* Surface panel gradient */}
-          <linearGradient id="panelDarkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#182438" stopOpacity="0.95" />
-            <stop offset="100%" stopColor="#111C2E" stopOpacity="0.9" />
-          </linearGradient>
-        </defs>
-
-        {/* Ambient atmospheric glow layer */}
-        <ellipse
-          cx="270"
-          cy="230"
-          rx="180"
-          ry="130"
-          fill="url(#heroOrangeAmbient)"
-          className="animate-ambient-glow"
-        />
-
-        {/* Layered dark foundation surface panels */}
-        <rect
-          x="30"
-          y="40"
-          width="480"
-          height="380"
-          rx="16"
-          fill="url(#panelDarkGrad)"
-          stroke="#263449"
-          strokeWidth="1"
-        />
-
-        {/* Geospatial coordinate grid lines (abstract) */}
-        <g stroke="#263449" strokeWidth="1" strokeOpacity="0.35">
-          <line x1="70" y1="40" x2="70" y2="420" />
-          <line x1="150" y1="40" x2="150" y2="420" />
-          <line x1="230" y1="40" x2="230" y2="420" />
-          <line x1="310" y1="40" x2="310" y2="420" />
-          <line x1="390" y1="40" x2="390" y2="420" />
-          <line x1="470" y1="40" x2="470" y2="420" />
-
-          <line x1="30" y1="100" x2="510" y2="100" />
-          <line x1="30" y1="160" x2="510" y2="160" />
-          <line x1="30" y1="220" x2="510" y2="220" />
-          <line x1="30" y1="280" x2="510" y2="280" />
-          <line x1="30" y1="340" x2="510" y2="340" />
-        </g>
-
-        {/* Secondary interconnected transit lines */}
-        <g stroke="#334155" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.6">
-          <path d="M 70 340 L 150 280 L 150 160 L 230 100" />
-          <path d="M 150 280 L 310 280 L 390 340 L 470 340" />
-          <path d="M 230 100 L 390 100 L 470 160" />
-          <path d="M 310 220 L 310 160 L 390 100" strokeDasharray="4 4" />
-          <path d="M 70 160 L 150 160 L 230 220" strokeDasharray="4 4" />
-        </g>
-
-        {/* Abstract infrastructure junction nodes */}
-        <g>
-          <circle cx="150" cy="280" r="4" fill="#38BDF8" fillOpacity="0.8" />
-          <circle cx="150" cy="160" r="4" fill="#38BDF8" fillOpacity="0.8" />
-          <circle cx="230" cy="100" r="4" fill="#38BDF8" fillOpacity="0.8" />
-          <circle cx="390" cy="100" r="4" fill="#38BDF8" fillOpacity="0.8" />
-          <circle cx="390" cy="340" r="4" fill="#38BDF8" fillOpacity="0.8" />
-          <circle cx="310" cy="280" r="4" fill="#38BDF8" fillOpacity="0.8" />
-        </g>
-
-        {/* Primary Highway Arterial: Road Orange Glowing Path */}
-        {/* Soft bloom layer */}
-        <path
-          d="M 50 380 C 130 350, 180 280, 270 230 S 390 170, 480 80"
-          fill="none"
-          stroke="#F97316"
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeOpacity="0.25"
-        />
-        {/* Crisp core arterial path with one-time stroke-dashoffset reveal */}
-        <path
-          d="M 50 380 C 130 350, 180 280, 270 230 S 390 170, 480 80"
-          fill="none"
-          stroke="url(#roadOrangeGrad)"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          className="animate-draw-road"
-        />
-
-        {/* Pulse rings at key strategic arterial junctions */}
-        <g>
-          <circle
-            cx="270"
-            cy="230"
-            r="14"
-            stroke="#F97316"
-            strokeOpacity="0.25"
-            strokeWidth="1.5"
+    <g>
+      <path d={`M${x} ${y} l${d} -${Math.round(d * 0.52)} h${w} l-${d} ${Math.round(d * 0.52)}z`} fill={roof} stroke="#71849b" strokeOpacity=".2" />
+      <path d={`M${x + w} ${y} l${d} -${Math.round(d * 0.52)} v${h} l-${d} ${Math.round(d * 0.52)}z`} fill={side} stroke="#71849b" strokeOpacity=".14" />
+      <path d={`M${x} ${y} h${w} v${h} h-${w}z`} fill={front} stroke="#71849b" strokeOpacity=".22" />
+      {Array.from({ length: rows }, (_, row) =>
+        Array.from({ length: columns }, (_, column) => (
+          <rect
+            key={`${row}-${column}`}
+            x={x + 8 + column * ((w - 16) / columns)}
+            y={y + 10 + row * ((h - 18) / rows)}
+            width="3.5"
+            height="5"
+            rx=".7"
+            fill={(row * 3 + column + tone) % 5 === 0 ? "#80d9ed" : "#657c96"}
+            fillOpacity={(row + column) % 3 === 0 ? ".63" : ".27"}
           />
-          <circle cx="270" cy="230" r="7" fill="#F97316" />
-          <circle cx="270" cy="230" r="3" fill="#0B1220" />
+        )),
+      )}
+      <path d={`M${x + w + 5} ${y - 7} v${Math.min(18, h / 5)}`} stroke="#53d9f0" strokeOpacity=".6" strokeWidth="1" />
+    </g>
+  );
+}
 
-          <circle cx="160" cy="295" r="10" stroke="#FBBF24" strokeOpacity="0.3" strokeWidth="1.5" />
-          <circle cx="160" cy="295" r="5" fill="#FBBF24" />
+export function HeroGraphic({ activeMarker }: { activeMarker?: MarkerId } = {}) {
+  const [active, setActive] = useState<MarkerId>("surface");
+  const [manualPause, setManualPause] = useState(false);
+  const [tabHidden, setTabHidden] = useState(false);
+  const svgId = useId().replaceAll(":", "");
+  const selected = MARKERS.find((marker) => marker.id === active)!;
 
-          <circle cx="400" cy="140" r="10" stroke="#F97316" strokeOpacity="0.3" strokeWidth="1.5" />
-          <circle cx="400" cy="140" r="5" fill="#F97316" />
-        </g>
+  useEffect(() => {
+    if (activeMarker) setActive(activeMarker);
+  }, [activeMarker]);
 
-        {/* Abstract geometric location pin markers (no text, no numbers, purely decorative) */}
-        {/* Marker 1: Central intersection */}
-        <g transform="translate(258, 188)">
-          <path
-            d="M 12 0 C 5.37 0 0 5.37 0 12 C 0 19.5 12 30 12 30 C 12 30 24 19.5 24 12 C 24 5.37 18.63 0 12 0 Z"
-            fill="#F97316"
-          />
-          <circle cx="12" cy="11" r="4.5" fill="#0B1220" />
-        </g>
+  useEffect(() => {
+    const updateVisibility = () => setTabHidden(document.hidden);
+    updateVisibility();
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => document.removeEventListener("visibilitychange", updateVisibility);
+  }, []);
 
-        {/* Marker 2: Secondary western node */}
-        <g transform="translate(148, 253)">
-          <path
-            d="M 10 0 C 4.48 0 0 4.48 0 10 C 0 16.25 10 25 10 25 C 10 25 20 16.25 20 10 C 20 4.48 15.52 0 10 0 Z"
-            fill="#FBBF24"
-          />
-          <circle cx="10" cy="9.5" r="3.5" fill="#0B1220" />
-        </g>
+  const isPaused = manualPause || tabHidden;
 
-        {/* Marker 3: North-eastern arterial node */}
-        <g transform="translate(390, 98)">
-          <path
-            d="M 10 0 C 4.48 0 0 4.48 0 10 C 0 16.25 10 25 10 25 C 10 25 20 16.25 20 10 C 20 4.48 15.52 0 10 0 Z"
-            fill="#38BDF8"
-          />
-          <circle cx="10" cy="9.5" r="3.5" fill="#0B1220" />
-        </g>
-      </svg>
+  return (
+    <div className={`city-hero-scene${isPaused ? " is-paused" : ""}`} role="group" aria-label="Illustrative city infrastructure scene">
+      <div className="city-hero-scene__topline">
+        <span><i aria-hidden="true" /> ROADFIX / CITY VIEW</span>
+        <span className="city-hero-scene__coordinates">AGRA · INFRASTRUCTURE MODEL</span>
+      </div>
+      <div className="city-hero-scene__viewport">
+        <div className="city-hero-scene__haze" aria-hidden="true" />
+        <svg className="city-hero-scene__art" viewBox="0 0 900 540" role="img" aria-labelledby="city-art-title city-art-desc">
+          <title id="city-art-title">RoadFix illustrative city network</title>
+          <desc id="city-art-desc">Layered city buildings surround glowing orange roads and cyan infrastructure signals. This is a visual model, not live municipal data.</desc>
+          <defs>
+            <linearGradient id={`citySky-${svgId}`} x1="0" y1="0" x2="0" y2="1"><stop stopColor="#101e32" /><stop offset="1" stopColor="#0b1220" /></linearGradient>
+            <linearGradient id={`cityGround-${svgId}`} x1="0" y1="0" x2=".8" y2="1"><stop stopColor="#17253a" /><stop offset="1" stopColor="#090f1a" /></linearGradient>
+            <linearGradient id={`roadSheen-${svgId}`} x1="0" y1="0" x2="1" y2="1"><stop stopColor="#344054" /><stop offset=".48" stopColor="#1a2638" /><stop offset="1" stopColor="#101a2a" /></linearGradient>
+            <radialGradient id={`cityGlow-${svgId}`}><stop stopColor="#f97316" stopOpacity=".25" /><stop offset="1" stopColor="#f97316" stopOpacity="0" /></radialGradient>
+            <pattern id={`cityGrid-${svgId}`} width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="skewY(-24)"><path d="M28 0H0V28" fill="none" stroke="#8ab1c5" strokeOpacity=".11" strokeWidth=".7" /></pattern>
+            <filter id={`roadBlur-${svgId}`} x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="8" /></filter>
+            <clipPath id={`cityClip-${svgId}`}><path d="M0 0h900v540H0z" /></clipPath>
+          </defs>
+          <g clipPath={`url(#cityClip-${svgId})`}>
+            <path fill={`url(#citySky-${svgId})`} d="M0 0h900v540H0z" />
+            <ellipse cx="490" cy="291" rx="330" ry="182" fill={`url(#cityGlow-${svgId})`} />
+            <path d="M0 344 180 264l179 80-179 100z" fill="#122137" opacity=".56" />
+            <path d="M350 344 541 258l208 94-208 104z" fill="#172840" opacity=".63" />
+            {BUILDINGS.map((building, index) => <Building key={index} {...building} />)}
+            <path d="M0 385 448 168l452 206-458 223z" fill={`url(#cityGround-${svgId})`} stroke="#62758a" strokeOpacity=".25" />
+            <path d="M0 385 448 168l452 206-458 223z" fill={`url(#cityGrid-${svgId})`} opacity=".78" />
+            <g fill="none" stroke="#030812" strokeWidth="38" strokeLinejoin="round" opacity=".8">
+              <path d="M20 455 445 250l433 195" />
+              <path d="M153 540 420 185" />
+              <path d="M592 540 462 194" />
+              <path d="M11 353 464 543" />
+            </g>
+            <g fill="none" stroke={`url(#roadSheen-${svgId})`} strokeWidth="30" strokeLinejoin="round">
+              <path d="M20 455 445 250l433 195" />
+              <path d="M153 540 420 185" />
+              <path d="M592 540 462 194" />
+              <path d="M11 353 464 543" />
+            </g>
+            <g fill="none" stroke="#fa7418" strokeWidth="13" strokeLinejoin="round" opacity=".35" filter={`url(#roadBlur-${svgId})`}>
+              <path d="M20 455 445 250l433 195" />
+              <path d="M153 540 420 185" />
+              <path d="M592 540 462 194" />
+              <path d="M11 353 464 543" />
+            </g>
+            <g className="city-road-lights" fill="none" stroke="#ff9a42" strokeWidth="2.3" strokeDasharray="2 21" strokeLinecap="round">
+              <path d="M20 455 445 250l433 195" />
+              <path d="M153 540 420 185" />
+              <path d="M592 540 462 194" />
+              <path d="M11 353 464 543" />
+            </g>
+            <g fill="none" stroke="#a6d8e8" strokeOpacity=".26" strokeWidth="1" strokeDasharray="5 9">
+              <path d="M21 455 445 250l433 195" />
+              <path d="M153 540 420 185" />
+              <path d="M592 540 462 194" />
+              <path d="M11 353 464 543" />
+            </g>
+            <g className="city-particle-field" fill="#b8edff">
+              <g className="city-particle"><circle cx="104" cy="116" r="1.4" /></g><g className="city-particle"><circle cx="762" cy="92" r="1" /></g><g className="city-particle"><circle cx="828" cy="240" r="1.5" /></g>
+              <g className="city-particle"><circle cx="264" cy="94" r="1" /></g><g className="city-particle"><circle cx="674" cy="134" r="1.2" /></g><g className="city-particle"><circle cx="354" cy="60" r=".9" /></g>
+            </g>
+            <g fill="none" stroke="#65e5f7" strokeWidth="1" opacity=".7">
+              <path d="M471 209v-28h48v28M506 181v-18h25v18" />
+              <path d="M497 179v-49h40v49M516 130v-16h20v16" />
+              <circle cx="520" cy="179" r="3" fill="#65e5f7" />
+              <path d="M520 121v-17m-8 8h16" />
+            </g>
+            <path d="M0 500h900v40H0z" fill="#090f1a" opacity=".7" />
+          </g>
+        </svg>
+        {MARKERS.map((marker) => (
+          <button
+            key={marker.id}
+            type="button"
+            className={`city-marker${active === marker.id ? " is-active" : ""}`}
+            style={{ left: marker.x, top: marker.y }}
+            aria-label={`Show ${marker.label.toLowerCase()} information`}
+            aria-pressed={active === marker.id}
+            onClick={() => setActive(marker.id)}
+          >
+            <span className="city-marker__pulse" aria-hidden="true" />
+            <span className="city-marker__core" aria-hidden="true">{marker.id === "surface" ? "!" : marker.id === "location" ? "⌖" : "↗"}</span>
+          </button>
+        ))}
+        <div className="city-hero-scene__readout" aria-live="polite">
+          <span className="city-hero-scene__readout-tag">INFRASTRUCTURE SIGNAL</span>
+          <strong>{selected.label}</strong>
+          <p>{selected.detail}</p>
+        </div>
+        <div className="city-hero-scene__axis city-hero-scene__axis--left" aria-hidden="true">ROAD / 04</div>
+        <div className="city-hero-scene__axis city-hero-scene__axis--right" aria-hidden="true">NETWORK / ACTIVE</div>
+      </div>
+      <div className="city-hero-scene__footer">
+        <span>ILLUSTRATIVE CITY MODEL · NO LIVE REPORTS</span>
+        <div className="city-hero-scene__controls">
+          <span>SELECT A SIGNAL TO INSPECT</span>
+          <button className="city-scene-motion-toggle" type="button" aria-label={manualPause ? "Resume city animation" : "Pause city animation"} aria-pressed={manualPause} onClick={() => setManualPause((paused) => !paused)}>
+            {manualPause ? <Play aria-hidden="true" /> : <Pause aria-hidden="true" />}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

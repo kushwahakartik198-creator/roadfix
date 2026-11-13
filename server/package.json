@@ -2,15 +2,27 @@
   "name": "roadfix-server",
   "version": "1.0.0",
   "private": true,
-  "description": "RoadFix local Node.js + file-backed DB server (replaces Supabase for local development). Zero runtime dependencies.",
+  "description": "RoadFix local Node.js REST API backed by SQLite.",
   "type": "module",
   "scripts": {
-    "dev": "node src/index.js",
+    "dev": "node ../scripts/run-server.mjs",
     "start": "node src/index.js",
     "seed": "node src/seed.js",
-    "reset": "node src/reset.js"
+    "reset": "node src/reset.js",
+    "test:db": "node --test src/db/database.test.js src/db/import-json.test.js src/db/maintenance.test.js src/auth/security.test.js",
+    "db:backup": "node src/db/maintenance-cli.js backup",
+    "db:backup-set": "node src/db/maintenance-cli.js backup-set",
+    "db:restore": "node src/db/maintenance-cli.js restore",
+    "db:integrity": "node src/db/maintenance-cli.js integrity",
+    "test:api": "node --test src/api.test.js",
+    "auth:bootstrap-admin": "node src/auth/bootstrap-admin.js",
+    "test": "npm run test:db && npm run test:api"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "12.11.1",
+    "sharp": "0.35.5"
   }
 }

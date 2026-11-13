@@ -102,8 +102,8 @@ export function WardExplorerPage() {
             const s = stats[ward.name];
             const total = s?.total ?? 0;
             return (
-              <Card key={ward.id} variant="interactive" className="hover:border-primary/50 hover:shadow-md" asChild>
-                <Link to={`/wards/${ward.id}`}>
+              <Card key={ward.id} variant="interactive" className="hover:border-primary/50 hover:shadow-md">
+                <Link className="block" to={`/wards/${ward.id}`}>
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">

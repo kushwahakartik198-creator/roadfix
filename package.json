@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:full": "node scripts/dev.mjs",
-    "server": "node server/src/index.js",
+    "server": "node scripts/run-server.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -30,7 +30,8 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.1.5",
     "sonner": "^2.0.1",
-    "tailwind-merge": "^3.0.1"
+    "tailwind-merge": "^3.0.1",
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",

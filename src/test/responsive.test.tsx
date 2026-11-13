@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { AuthProvider } from "@/features/auth/AuthContext";
 import { routes } from "@/app/router";
 import fs from "fs";
 import path from "path";
@@ -16,7 +17,7 @@ describe("Responsive Layout & Viewport Verification (360px, 390px, 768px, 1024px
       window.dispatchEvent(new Event("resize"));
 
       const router = createMemoryRouter(routes, { initialEntries: ["/"] });
-      const { container, unmount } = render(<RouterProvider router={router} />);
+      const { container, unmount } = render(<AuthProvider><RouterProvider router={router} /></AuthProvider>);
 
       // Mobile menu toggle button exists and has min 44x44px touch target classes
       const toggleButton = screen.getByRole("button", { name: /open navigation menu/i });
@@ -33,7 +34,7 @@ describe("Responsive Layout & Viewport Verification (360px, 390px, 768px, 1024px
       fireEvent.click(toggleButton);
       const mobileNav = screen.getByRole("navigation", { name: "Mobile Navigation" });
       const mobileNavLinks = mobileNav.querySelectorAll("a");
-      expect(mobileNavLinks.length).toBe(4);
+      expect(mobileNavLinks.length).toBe(5);
       for (const link of mobileNavLinks) {
         expect(link.className).toMatch(/min-h-\[44px\]/);
       }
@@ -57,7 +58,7 @@ describe("Responsive Layout & Viewport Verification (360px, 390px, 768px, 1024px
       window.dispatchEvent(new Event("resize"));
 
       const router = createMemoryRouter(routes, { initialEntries: ["/"] });
-      const { unmount } = render(<RouterProvider router={router} />);
+      const { unmount } = render(<AuthProvider><RouterProvider router={router} /></AuthProvider>);
 
       const desktopNav = screen.getByRole("navigation", { name: "Main Navigation" });
       expect(desktopNav).toBeInTheDocument();
@@ -73,7 +74,7 @@ describe("Responsive Layout & Viewport Verification (360px, 390px, 768px, 1024px
   it("verifies visible focus ring styling across interactive navigation and buttons", async () => {
     const user = userEvent.setup();
     const router = createMemoryRouter(routes, { initialEntries: ["/"] });
-    render(<RouterProvider router={router} />);
+    render(<AuthProvider><RouterProvider router={router} /></AuthProvider>);
 
     // Tab to skip link
     await user.tab();

@@ -7,6 +7,9 @@ import { OfficerPage } from "@/pages/OfficerPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { WardExplorerPage } from "@/pages/WardExplorerPage";
 import { WardDetailPage } from "@/pages/WardDetailPage";
+import { LoginPage } from "@/pages/LoginPage";
+import { AdminPage } from "@/pages/AdminPage";
+import { RequireAuth } from "@/features/auth/RequireAuth";
 
 export const routes: RouteObject[] = [
   {
@@ -24,6 +27,7 @@ export const routes: RouteObject[] = [
         path: "/track",
         element: <TrackPage />,
       },
+      { path: "/login", element: <LoginPage /> },
       {
         path: "/wards",
         element: <WardExplorerPage />,
@@ -32,10 +36,10 @@ export const routes: RouteObject[] = [
         path: "/wards/:wardId",
         element: <WardDetailPage />,
       },
-      {
-        path: "/officer",
-        element: <OfficerPage />,
-      },
+      { element: <RequireAuth />, children: [
+        { path: "/officer", element: <OfficerPage /> },
+        { element: <RequireAuth role="admin" />, children: [{ path: "/admin", element: <AdminPage /> }] },
+      ] },
       {
         path: "*",
         element: <NotFoundPage />,

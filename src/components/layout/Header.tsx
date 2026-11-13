@@ -3,18 +3,21 @@ import { Link, useLocation } from "react-router-dom";
 import { ShieldAlert, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/types";
+import { useAuth } from "@/features/auth/useAuth";
 
 const NAV_ITEMS: readonly NavItem[] = [
   { title: "Home", href: "/" },
   { title: "Report", href: "/report" },
   { title: "Track", href: "/track" },
   { title: "Wards", href: "/wards" },
-  { title: "Officer", href: "/officer" },
 ];
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const location = useLocation();
+  const { user, logout, logoutPending, logoutError } = useAuth();
+  const handleLogout = () => { void logout(); };
+  const navItems = [...NAV_ITEMS, ...(user ? [{ title: user.role === "admin" ? "Admin" : "Officer", href: user.role === "admin" ? "/admin" : "/officer" }] : [{ title: "Staff login", href: "/login" }])];
 
   // Close mobile menu when route changes
   React.useEffect(() => {
@@ -57,7 +60,7 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav aria-label="Main Navigation" className="hidden md:flex md:items-center md:gap-1">
-          {NAV_ITEMS.map((item) => {
+          {navItems.map((item) => {
             const isActive = location.pathname === item.href;
             return (
               <Link
@@ -75,6 +78,7 @@ export function Header() {
               </Link>
             );
           })}
+          {user && <button type="button" onClick={handleLogout} disabled={logoutPending} className="ml-2 rounded-md border px-3 py-2 text-sm disabled:opacity-60">{logoutPending ? "Logging out…" : logoutError ? "Retry logout" : "Log out"}</button>}
         </nav>
 
         {/* Mobile menu toggle button */}
@@ -94,6 +98,8 @@ export function Header() {
         </button>
       </div>
 
+      {logoutError && <p role="alert" className="mx-auto max-w-7xl px-4 pb-3 text-sm text-destructive sm:px-6 lg:px-8">{logoutError}</p>}
+
       {/* Collapsed Mobile Navigation Menu */}
       {isMobileMenuOpen && (
         <nav
@@ -101,7 +107,7 @@ export function Header() {
           aria-label="Mobile Navigation"
           className="md:hidden border-b border-border bg-background px-4 pt-2 pb-4 space-y-1 shadow-lg"
         >
-          {NAV_ITEMS.filter((item) => item.href !== "/officer").map((item) => {
+          {navItems.map((item) => {
             const isActive = location.pathname === item.href;
             return (
               <Link
@@ -119,6 +125,7 @@ export function Header() {
               </Link>
             );
           })}
+          {user && <button type="button" onClick={handleLogout} disabled={logoutPending} className="w-full rounded-md border px-4 py-3 text-left disabled:opacity-60">{logoutPending ? "Logging out…" : logoutError ? "Retry logout" : "Log out"}</button>}
         </nav>
       )}
     </header>

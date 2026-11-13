@@ -18,7 +18,7 @@ const viteBin = isWindows
   : "node_modules/.bin/vite";
 
 const vite = spawn(viteBin, [], { cwd, stdio: "inherit", env: process.env });
-const server = spawn("node", ["server/src/index.js"], {
+const server = spawn(process.execPath, ["scripts/run-server.mjs"], {
   cwd,
   stdio: "inherit",
   env: { ...process.env, PORT: process.env.PORT || "4000" },
