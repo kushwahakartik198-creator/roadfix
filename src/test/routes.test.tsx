@@ -34,51 +34,58 @@ describe("Route Rendering Tests", () => {
     const expectedFooter =
       "RoadFix — a civic-tech initiative, Agra. Not an official government service.";
     expect(screen.getByText(expectedFooter)).toBeInTheDocument();
+    const footerBrand = screen.getByText("ROADFIX").closest(".app-footer__brand");
+    expect(footerBrand?.querySelectorAll(":scope > *")).toHaveLength(2);
+    const footerLinks = screen.getByRole("navigation", { name: "Footer navigation" });
+    expect(footerLinks).toHaveClass("flex", "flex-row", "flex-wrap", "gap-x-5", "gap-y-2");
 
     // Exactly one <h1> on the page
     const h1Headings = screen.getAllByRole("heading", { level: 1 });
     expect(h1Headings).toHaveLength(1);
-    expect(h1Headings[0]).toHaveTextContent("Smarter Roads. Safer Cities.");
+    expect(h1Headings[0]).toHaveTextContent("Agra’s potholes, on the record.");
 
-    // Eyebrow & subtitle
-    expect(screen.getByText(/civic infrastructure intelligence/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/report potholes\. track road repairs\. help make agra's roads safer\./i)
-    ).toBeInTheDocument();
+    // Current Phase B hero copy
+    expect(screen.getByText(/agra’s potholes, on the record/i)).toBeInTheDocument();
+    expect(screen.getByText(/smarter roads\. safer cities\./i)).toBeInTheDocument();
 
     // Hero & Final CTAs
-    const reportLinks = screen.getAllByRole("link", { name: /report a pothole/i });
-    expect(reportLinks.length).toBeGreaterThanOrEqual(2);
+    const reportLinks = screen.getAllByRole("link", { name: /report a road issue/i });
+    expect(reportLinks.length).toBeGreaterThanOrEqual(1);
     reportLinks.forEach((link) => expect(link).toHaveAttribute("href", "/report"));
 
-    const trackComplaintHeroLink = screen.getByRole("link", { name: /^track a complaint$/i });
-    expect(trackComplaintHeroLink).toHaveAttribute("href", "/track");
+    const trackComplaintLinks = screen.getAllByRole("link", { name: /track/i });
+    expect(trackComplaintLinks.length).toBeGreaterThanOrEqual(1);
+    trackComplaintLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/track");
+    });
+    // Interactive five-stage scroll story and its real page anchors
+    expect(screen.getByRole("heading", { name: /from road damage to recorded repair/i, level: 2 })).toBeInTheDocument();
+    for (const stage of ["Road damage", "Citizen report", "Municipal review", "Officer action", "Resolution"]) {
+      expect(screen.getByRole("button", { name: new RegExp(stage, "i") })).toBeInTheDocument();
+    }
 
-    // How It Works headings (updated copy)
-    expect(screen.getByRole("heading", { name: /^how roadfix works$/i, level: 2 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^spot and document$/i, level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^submit and track$/i, level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^work towards safer roads$/i, level: 3 })).toBeInTheDocument();
+    // Platform preview is explicitly illustrative and does not imply live records
+    expect(screen.getByRole("heading", { name: /one place to follow the road ahead/i, level: 2 })).toBeInTheDocument();
+    expect(screen.getByText(/illustrative interface preview · sample records, not live data/i)).toBeInTheDocument();
+    expect(screen.getByText(/RF-AG-ILLUSTRATIVE-01/i)).toBeInTheDocument();
 
-    // Why RoadFix headings
-    expect(screen.getByRole("heading", { name: /^why roadfix$/i, level: 2 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^citizen participation$/i, level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^transparent complaint tracking$/i, level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^better visibility into road issues$/i, level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^geographical awareness$/i, level: 3 })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /^a more organised approach$/i, level: 3 })).toBeInTheDocument();
+    // Six feature treatments
+    expect(screen.getByRole("heading", { name: /from first signal to visible progress/i, level: 2 })).toBeInTheDocument();
+    for (const feature of ["Easy citizen reporting", "Location-based tracking", "Transparent status", "Authority management", "Complaint verification", "Structured repair workflow"]) {
+      expect(screen.getByRole("heading", { name: feature, level: 3 })).toBeInTheDocument();
+    }
 
     // Agra Focus & Final CTA
     expect(
       screen.getByRole("heading", {
-        name: /^built for better roads, starting with agra\.$/i,
+        name: /^roadfix starts with agra\.$/i,
         level: 2,
       })
     ).toBeInTheDocument();
-    expect(screen.getByText(/illustrative schematic — not live municipal data\./i)).toBeInTheDocument();
+    expect(screen.getByText(/built to make road maintenance more transparent, one report at a time/i)).toBeInTheDocument();
     expect(
       screen.getByRole("heading", {
-        name: /^every safer road starts with a report\.$/i,
+        name: /^better roads begin with one report\.$/i,
         level: 2,
       })
     ).toBeInTheDocument();

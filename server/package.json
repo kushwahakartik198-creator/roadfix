@@ -5,8 +5,8 @@
   "description": "RoadFix local Node.js REST API backed by SQLite.",
   "type": "module",
   "scripts": {
-    "dev": "node ../scripts/run-server.mjs",
-    "start": "node src/index.js",
+    "dev": "node --env-file-if-exists=.env ../scripts/run-server.mjs",
+    "start": "node --env-file-if-exists=.env src/index.js",
     "seed": "node src/seed.js",
     "reset": "node src/reset.js",
     "test:db": "node --test src/db/database.test.js src/db/import-json.test.js src/db/maintenance.test.js src/auth/security.test.js",

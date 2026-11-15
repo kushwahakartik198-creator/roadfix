@@ -9,7 +9,7 @@ if (!env.ROADFIX_SECURITY_MODE && (!env.NODE_ENV || env.NODE_ENV === "developmen
 }
 if (!env.PORT) env.PORT = "4000";
 
-const server = spawn(process.execPath, [resolve(projectRoot, "server/src/index.js")], { cwd: projectRoot, stdio: "inherit", env });
+const server = spawn(process.execPath, ["--env-file-if-exists=server/.env", resolve(projectRoot, "server/src/index.js")], { cwd: projectRoot, stdio: "inherit", env });
 server.once("error", (error) => {
   console.error("RoadFix server could not be started", error);
   process.exitCode = 1;

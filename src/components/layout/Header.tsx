@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { ShieldAlert, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { NavItem } from "@/types";
@@ -36,7 +36,7 @@ export function Header() {
   }, [isMobileMenuOpen]);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className={`app-header sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60${location.pathname === "/" ? " app-header--home" : ""}`}>
       {/* Skip to main content link */}
       <a
         href="#main-content"
@@ -61,13 +61,12 @@ export function Header() {
         {/* Desktop Navigation */}
         <nav aria-label="Main Navigation" className="hidden md:flex md:items-center md:gap-1">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.href;
             return (
-              <Link
+              <NavLink
                 key={item.href}
                 to={item.href}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
+                end={item.href === "/"}
+                className={({ isActive }) => cn(
                   "flex items-center px-3 py-2 text-sm font-medium rounded-md min-h-[44px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   isActive
                     ? "bg-primary text-primary-foreground font-semibold"
@@ -75,7 +74,7 @@ export function Header() {
                 )}
               >
                 {item.title}
-              </Link>
+              </NavLink>
             );
           })}
           {user && <button type="button" onClick={handleLogout} disabled={logoutPending} className="ml-2 rounded-md border px-3 py-2 text-sm disabled:opacity-60">{logoutPending ? "Logging out…" : logoutError ? "Retry logout" : "Log out"}</button>}
@@ -108,13 +107,12 @@ export function Header() {
           className="md:hidden border-b border-border bg-background px-4 pt-2 pb-4 space-y-1 shadow-lg"
         >
           {navItems.map((item) => {
-            const isActive = location.pathname === item.href;
             return (
-              <Link
+              <NavLink
                 key={item.href}
                 to={item.href}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
+                end={item.href === "/"}
+                className={({ isActive }) => cn(
                   "flex items-center w-full px-4 py-3 rounded-md text-base font-medium min-h-[44px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   isActive
                     ? "bg-primary text-primary-foreground font-semibold"
@@ -122,7 +120,7 @@ export function Header() {
                 )}
               >
                 {item.title}
-              </Link>
+              </NavLink>
             );
           })}
           {user && <button type="button" onClick={handleLogout} disabled={logoutPending} className="w-full rounded-md border px-4 py-3 text-left disabled:opacity-60">{logoutPending ? "Logging out…" : logoutError ? "Retry logout" : "Log out"}</button>}

@@ -14,7 +14,7 @@ export const brandTokens = {
   // Road Orange: Signature brand color, primary interactive CTAs
   roadOrange: "#F97316",
   primary: "#F97316",
-  primaryForeground: "#0B1220",
+  primaryForeground: "#1A1205",
 
   // Signal Amber: Warning/priority and secondary highlight
   signalAmber: "#FBBF24",
@@ -35,7 +35,7 @@ export const brandTokens = {
   success: "#22C55E",
   successForeground: "#0B1220",
   warning: "#F59E0B",
-  warningForeground: "#0B1220",
+  warningForeground: "#1A1205",
   error: "#EF4444",
   errorForeground: "#0B1220",
   info: "#38BDF8",

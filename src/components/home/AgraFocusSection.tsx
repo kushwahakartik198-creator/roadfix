@@ -7,7 +7,7 @@ export function AgraFocusSection() {
       <div className="agra-focus__copy">
         <p className="living-kicker"><span className="living-kicker__line" /> INITIAL TARGET CITY</p>
         <h2 id="agra-focus-heading">RoadFix starts<br /><em>with Agra.</em></h2>
-        <p>Agra, Uttar Pradesh is RoadFix’s initial target city. The platform is designed to grow to more cities over time.</p>
+        <p>Built to make road maintenance more transparent, one report at a time.</p>
       </div>
       <div className="agra-focus__locator" aria-hidden="true">
         <span className="agra-focus__locator-ring" /><span className="agra-focus__locator-core" />

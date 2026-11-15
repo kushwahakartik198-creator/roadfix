@@ -4,6 +4,8 @@ import { api, type PublicHistory, type PublicTrack, type ApiError } from "@/lib/
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ComplaintActivityTimeline } from "@/components/tracking/ComplaintActivityTimeline";
+import { formatReliableTimestamp, normalizePublicHistory } from "@/lib/complaint-timeline";
 
 export function TrackPage() {
   const [params] = useSearchParams();
@@ -24,9 +26,14 @@ export function TrackPage() {
     setHistory([]);
     try {
       const result = await api.trackIssue(reference.trim());
-      const events = await api.getIssueHistory(reference.trim());
       setTrack(result);
-      setHistory(events);
+      try {
+        const events = await api.getIssueHistory(reference.trim());
+        setHistory(normalizePublicHistory(events));
+      } catch {
+        // Tracking details remain useful when historical transition data is unavailable.
+        setHistory([]);
+      }
     } catch (e) {
       const status = (e as ApiError).status;
       setError(
@@ -74,17 +81,19 @@ export function TrackPage() {
             <p className="capitalize">{track.status.replaceAll("_", " ")}</p>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <p>Reported {new Date(track.submittedAt).toLocaleString()}</p>
-            <p>Last updated {new Date(track.lastUpdatedAt).toLocaleString()}</p>
+            {formatReliableTimestamp(track.submittedAt) && <p>Reported {formatReliableTimestamp(track.submittedAt)}</p>}
+            {formatReliableTimestamp(track.lastUpdatedAt) && <p>Last updated {formatReliableTimestamp(track.lastUpdatedAt)}</p>}
             <p>{track.locationDescription || "Location details are not available."}</p>
+            <ComplaintActivityTimeline status={track.status} submittedAt={track.submittedAt} history={history} />
             <h2 className="pt-3 font-semibold">Status history</h2>
+            {history.length === 0 && <p className="text-muted-foreground">Recorded transition history is unavailable; the timeline above reflects the current status.</p>}
             {history.map((item, index) => (
               <div key={`${item.createdAt}-${index}`} className="border-l-2 pl-3">
                 <p className="capitalize">
                   {item.eventType.replaceAll("_", " ")}
                   {item.toStatus ? ` — ${item.toStatus.replaceAll("_", " ")}` : ""}
                 </p>
-                <p className="text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</p>
+                {formatReliableTimestamp(item.createdAt) && <p className="text-muted-foreground">{formatReliableTimestamp(item.createdAt)}</p>}
               </div>
             ))}
           </CardContent>

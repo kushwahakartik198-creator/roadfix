@@ -12,7 +12,7 @@ npm ci --prefix server
 npm run server
 ```
 
-The API defaults to `127.0.0.1:4000`. To run the frontend and API together locally, use `npm run dev:full`; the Vite development server is at `http://127.0.0.1:5173` and proxies `/api` to the API. Do not run the normal server startup against a production database during development: startup opens the default database and applies pending migrations.
+The API defaults to `127.0.0.1:4000`. From the server directory, `npm run dev` and `npm start` load `server/.env` through Node's `--env-file-if-exists` option. Existing process environment values take precedence. The root `npm run dev:full` launcher loads the same file for its API child process. The Vite development server is at `http://127.0.0.1:5173` and proxies `/api` to the API. Do not run the normal server startup against a production database during development: startup opens the default database and applies pending migrations.
 
 Node.js 20 or newer is declared by `server/package.json`; use Node.js 24 for the currently documented project baseline.
 
@@ -26,14 +26,16 @@ Variables actually read by current code:
 | `NODE_ENV` | Affects security-mode default and must not be `production` with local security mode. |
 | `HOST` | API bind host; default `127.0.0.1`. Local mode permits loopback only. |
 | `PORT` | API port; default `4000`. |
+| `ROADFIX_DB_PATH` | Optional SQLite file path. Relative paths resolve from the server package directory; currently configured to `data/hackathon-demo/roadfix-demo.sqlite`. |
 | `CORS_ORIGINS` | Comma-separated exact origins. Production requires one or more HTTPS origins with no paths or wildcard. |
 | `UPLOAD_STORAGE_MAX_BYTES` | Optional upload storage quota in bytes; defaults to 500 MiB and must be at least 5 MiB. |
 
-The browser optionally reads `VITE_API_URL` (empty means same-origin API requests). Vite reads root `.env` files for frontend variables; the Node server reads its settings from the process environment and does not load `.env` itself, so configure server values in the Windows service/launcher environment. Production needs a correctly configured HTTPS edge/reverse proxy, a deliberate bind host, matching exact `CORS_ORIGINS`, and secure cookies. This repository does not set up TLS, a Windows service, firewall rules, or proxy trust. Review `.env.example` and the Windows operations runbook. `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are retained as legacy/inactive configuration for this application path.
+The browser optionally reads `VITE_API_URL` (empty means same-origin API requests). Vite reads root `.env` files for frontend variables; the server launch commands load `server/.env` and also accept service/launcher environment variables. Production needs a correctly configured HTTPS edge/reverse proxy, a deliberate bind host, matching exact `CORS_ORIGINS`, and secure cookies. This repository does not set up TLS, a Windows service, firewall rules, or proxy trust. Review `.env.example` and the Windows operations runbook. `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are retained as legacy/inactive configuration for this application path.
 
 ## Data locations
 
 - Default database: `server/data/roadfix.sqlite`.
+- Current configured application database: `server/data/hackathon-demo/roadfix-demo.sqlite`.
 - Default private image storage: `server/data/uploads/`.
 - Schema migrations: `server/src/db/migrations/`; normal startup applies pending migrations.
 

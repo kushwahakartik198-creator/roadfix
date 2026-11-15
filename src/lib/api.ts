@@ -104,6 +104,7 @@ export interface AuditEntry {
   action: string; targetComplaintId: string | null; targetUserId: string | null; createdAt: string;
 }
 export interface ComplaintPhoto { id: string; contentType: string; sizeBytes: number; createdAt: string; }
+export interface NearbyPotholeMatch { reference: string; status: IssueStatus; distanceMeters: number; }
 export interface Stats { total: number; byStatus: Record<IssueStatus, number>; bySeverity: Record<IssueSeverity, number>; byWard: { name: string; count: number }[]; }
 
 export interface CreateIssueInput {
@@ -134,6 +135,7 @@ export const api = {
   getIssue: (id: string) => request<PublicIssue>(`/api/issues/${encodeURIComponent(id)}`),
   trackIssue: (reference: string) => request<PublicTrack>(`/api/issues/${encodeURIComponent(reference)}/track`),
   getIssueHistory: (reference: string) => request<PublicHistory[]>(`/api/issues/${encodeURIComponent(reference)}/track/history`),
+  findNearbyPotholes: (lat: number, lng: number) => request<NearbyPotholeMatch[]>(`/api/issues/nearby-potholes?${query({ lat, lng })}`),
   createIssue: (input: CreateIssueInput) => request<{ id: string; reference: string; status: IssueStatus; title: string }>("/api/issues", { method: "POST", body: JSON.stringify(input) }),
   transitionIssue: (id: string, input: { status: IssueStatus; severity?: IssueSeverity; note?: string }) => request<OperationalIssue>(`/api/issues/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) }, true),
   assignIssue: (id: string, officerId: string) => request<OperationalIssue>(`/api/issues/${encodeURIComponent(id)}/assign`, { method: "POST", body: JSON.stringify({ officerId }) }, true),

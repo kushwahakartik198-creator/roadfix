@@ -1,7 +1,7 @@
 import http from "node:http";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { openDatabase } from "./db/database.js";
+import { configuredDatabasePath, openDatabase } from "./db/database.js";
 import { createApiHandler } from "./api.js";
 import { createSecurityConfig } from "./security-config.js";
 
@@ -11,7 +11,8 @@ export function createRoadFixServer({ db, host = process.env.HOST || "127.0.0.1"
     corsOrigins: securityConfig?.origins?.join(","),
     host: securityConfig?.host ?? host,
   });
-  const connection = db ?? openDatabase();
+  const databasePath = db ? null : configuredDatabasePath();
+  const connection = db ?? openDatabase({ dbPath: databasePath });
   const server = http.createServer(createApiHandler({ db: connection, uploadsRoot, securityConfig: security }));
   return {
     server,
@@ -24,6 +25,7 @@ export function createRoadFixServer({ db, host = process.env.HOST || "127.0.0.1"
         server.listen(port, host, () => {
           server.off("error", reject);
           console.log(`[RoadFix] SQLite API running at http://${host}:${port}`);
+          if (databasePath) console.log(`[RoadFix] SQLite database: ${databasePath}`);
           resolve(server);
         });
       });

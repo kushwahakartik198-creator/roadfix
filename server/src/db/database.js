@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 
@@ -9,6 +9,16 @@ export const DEFAULT_DATABASE_PATH = resolve(SERVER_ROOT, "data", "roadfix.sqlit
 export const DEFAULT_MIGRATIONS_DIR = fileURLToPath(new URL("./migrations/", import.meta.url));
 export const ROADFIX_APPLICATION_ID = 0x52444658;
 export const DEFAULT_BUSY_TIMEOUT_MS = 5000;
+
+export function resolveDatabasePath(configuredPath, serverRoot = SERVER_ROOT) {
+  if (typeof configuredPath !== "string" || !configuredPath.trim()) return resolve(serverRoot, "data", "roadfix.sqlite");
+  const candidate = configuredPath.trim();
+  return isAbsolute(candidate) ? resolve(candidate) : resolve(serverRoot, candidate);
+}
+
+export function configuredDatabasePath(env = process.env, serverRoot = SERVER_ROOT) {
+  return resolveDatabasePath(env.ROADFIX_DB_PATH, serverRoot);
+}
 
 function getMigrationFiles(migrationsDir) {
   const files = readdirSync(migrationsDir)
@@ -113,7 +123,7 @@ function assertRoadFixDatabase(db, existedBeforeOpen) {
 }
 
 export function openDatabase({
-  dbPath = DEFAULT_DATABASE_PATH,
+  dbPath = configuredDatabasePath(),
   migrationsDir = DEFAULT_MIGRATIONS_DIR,
   migrate = true,
   busyTimeoutMs = DEFAULT_BUSY_TIMEOUT_MS,

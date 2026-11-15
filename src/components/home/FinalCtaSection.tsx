@@ -8,14 +8,14 @@ export function FinalCtaSection() {
       <div className="living-close__grid" aria-hidden="true" />
       <div className="living-close__content">
         <p className="living-kicker"><span className="living-kicker__line" /> THE NEXT STEP STARTS HERE</p>
-        <h2 id="final-cta-heading">Know a road<br /><em>that needs attention?</em></h2>
+        <h2 id="final-cta-heading">Better roads begin<br /><em>with one report.</em></h2>
         <p>Share the location and details so the issue can be reviewed and followed.</p>
         <div className="living-hero__actions living-close__actions">
           <Button asChild size="lg" className="living-button living-button--primary">
-            <Link to="/report"><span>Report a Pothole</span><ArrowRight aria-hidden="true" /></Link>
+            <Link to="/report"><span>Report a Road Issue</span><ArrowRight aria-hidden="true" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="living-button living-button--secondary">
-            <Link to="/track"><Search aria-hidden="true" /><span>Track Complaint</span></Link>
+            <Link to="/track"><Search aria-hidden="true" /><span>Track Your Complaint</span></Link>
           </Button>
         </div>
       </div>

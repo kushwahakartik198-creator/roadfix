@@ -8,16 +8,16 @@ export function HeroSection() {
     <section aria-labelledby="hero-heading" className="living-hero">
       <div className="living-hero__copy">
         <p className="living-kicker"><span className="living-kicker__line" /> CIVIC INFRASTRUCTURE / AGRA</p>
-        <h1 id="hero-heading">Smarter Roads.<br /><em>Safer Cities.</em></h1>
+        <h1 id="hero-heading">Smarter Roads. <br /><em>Safer Cities.</em></h1>
         <p className="living-hero__lead">
-          Report potholes, track repairs, and help build safer roads through a connected civic infrastructure platform.
+          Every road issue deserves attention. RoadFix connects citizens and municipal authorities to report, verify and resolve damaged roads through one transparent platform.
         </p>
         <div className="living-hero__actions">
           <Button asChild size="lg" className="living-button living-button--primary">
-            <Link to="/report"><span>Report a Pothole</span><ArrowRight aria-hidden="true" /></Link>
+            <Link to="/report"><span>Report a Road Issue</span><ArrowRight aria-hidden="true" /></Link>
           </Button>
           <Button asChild variant="outline" size="lg" className="living-button living-button--secondary">
-            <Link to="/track"><Search aria-hidden="true" /><span>Track Complaint</span></Link>
+            <Link to="/track"><Search aria-hidden="true" /><span>Track a Complaint</span></Link>
           </Button>
         </div>
         <a className="living-hero__scroll" href="#city-journey"><span>FOLLOW THE ROAD</span><ArrowDown aria-hidden="true" /></a>

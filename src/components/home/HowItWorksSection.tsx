@@ -68,11 +68,11 @@ export function HowItWorksSection() {
 
   return (
     <section id="city-journey" aria-labelledby="how-it-works-heading" className="city-journey">
-      <header className="city-journey__heading">
+      <div className="city-journey__heading">
         <p className="living-kicker"><span className="living-kicker__line" /> ONE REPORT / A CLEARER ROUTE</p>
         <h2 id="how-it-works-heading">From road damage<br /><em>to recorded repair.</em></h2>
         <p>This illustrative journey shows how a road complaint can move through RoadFix. It is not a live case or a claim that every report is resolved.</p>
-      </header>
+      </div>
       <div className="city-journey__layout">
         <ol className="city-journey__steps">
           {JOURNEY.map((step, index) => (
@@ -96,11 +96,11 @@ export function HowItWorksSection() {
             </li>
           ))}
         </ol>
-        <aside className="city-journey__visual" aria-label={`City model showing ${activeStep.label.toLowerCase()}`}>
+        <aside className="city-journey__visual" data-active-step={activeId} aria-label={`City model showing ${activeStep.label.toLowerCase()}`}>
           <HeroGraphic activeMarker={activeMarker} />
           <div className="city-journey__stage" aria-live="polite">
             <span>JOURNEY STAGE / {activeStep.number}</span>
-            <strong>{activeStep.signal}</strong>
+            <strong key={activeStep.id}>{activeStep.signal}</strong>
           </div>
         </aside>
       </div>
