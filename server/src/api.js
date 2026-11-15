@@ -134,6 +134,7 @@ export function createApiHandler({ db, securityConfig, uploadsRoot = UPLOADS_ROO
   const auth = createAuthService(db, { secureCookies: security.secureCookies });
   const loginLimiter = new FixedWindowLimiter({ maxKeys: 20_000 });
   const trackingLimiter = new FixedWindowLimiter({ maxKeys: 20_000 });
+  const nearbyPotholeLimiter = new FixedWindowLimiter({ maxKeys: 20_000 });
   const submissionLimiter = new FixedWindowLimiter({ maxKeys: 20_000 });
   let activeSubmissions = 0;
   let reservedUploadBytes = 0;
@@ -198,6 +199,18 @@ export function createApiHandler({ db, securityConfig, uploadsRoot = UPLOADS_ROO
       if (path === "/api/wards" && req.method === "GET") {
         const data = repo.listWards({ q: boundedParam(url, "q", 100), active: url.searchParams.get("active") });
         return sendJson(res, 200, { ok: true, data, count: data.length });
+      }
+      if (path === "/api/issues/nearby-potholes" && req.method === "GET") {
+        const limit = nearbyPotholeLimiter.consume(`nearby-potholes:${requestRemoteAddress(req)}`, { limit: 30, windowMs: 60 * 1000 });
+        if (!limit.allowed) {
+          res.setHeader("Retry-After", String(limit.retryAfter));
+          return sendJson(res, 429, { ok: false, error: "Too many nearby report checks. Try again later." });
+        }
+        const lat = parseCoordinate(url, "lat", -90, 90);
+        const lng = parseCoordinate(url, "lng", -180, 180);
+        const matches = repo.findNearbyActivePotholes({ lat, lng, radiusMeters: 50, limit: 5 });
+        res.setHeader("Cache-Control", "no-store");
+        return sendJson(res, 200, { ok: true, data: matches });
       }
       const wardIssues = path.match(/^\/api\/wards\/([^/]+)\/issues$/);
       if (wardIssues && req.method === "GET") {
@@ -489,6 +502,14 @@ function unauthorized(res, message = "Authentication required", req) {
   return sendJson(res, 401, { ok: false, error: message });
 }
 function requireOrigin(req, origins) { return typeof req.headers.origin === "string" && origins.includes(req.headers.origin); }
+
+function parseCoordinate(url, name, min, max) {
+  const values = url.searchParams.getAll(name);
+  if (values.length !== 1 || !values[0].trim()) throw new ValidationError(`A valid ${name} coordinate is required`);
+  const value = Number(values[0]);
+  if (!Number.isFinite(value) || value < min || value > max) throw new ValidationError(`A valid ${name} coordinate is required`);
+  return value;
+}
 function requireRole(req, res, auth, roles) {
   const session = auth.authenticate(req);
   if (!session) { sendJson(res, 401, { ok: false, error: "Authentication required" }); return null; }

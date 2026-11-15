@@ -46,6 +46,21 @@ describe("Navigation & Accessibility Tests", () => {
     expect(reportLink).toHaveAttribute("aria-current", "page");
   });
 
+  it.each([
+    ["/", "Home"],
+    ["/report", "Report"],
+    ["/track", "Track"],
+    ["/wards", "Wards"],
+    ["/login", "Staff login"],
+  ])("marks only the active navigation link at %s", (path, activeLabel) => {
+    renderNavigation(path);
+    const desktopNav = screen.getByRole("navigation", { name: "Main Navigation" });
+    const currentLinks = desktopNav.querySelectorAll('a[aria-current="page"]');
+    expect(currentLinks).toHaveLength(1);
+    expect(currentLinks[0]).toHaveTextContent(activeLabel);
+    expect(currentLinks[0]).toHaveClass("bg-primary", "text-primary-foreground");
+  });
+
   it("supports keyboard tab navigation to links with focusable order", async () => {
     const { user } = renderNavigation("/");
 

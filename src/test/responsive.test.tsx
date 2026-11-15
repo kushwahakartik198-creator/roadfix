@@ -26,7 +26,7 @@ describe("Responsive Layout & Viewport Verification (360px, 390px, 768px, 1024px
       expect(toggleButton.className).toMatch(/min-w-\[44px\]/);
 
       // Hero action button has accessible touch target (using getAllByRole)
-      const heroCtaButton = screen.getAllByRole("link", { name: /report a pothole/i })[0];
+      const heroCtaButton = screen.getAllByRole("link", { name: /report a road issue/i })[0];
       expect(heroCtaButton).toBeDefined();
       expect(heroCtaButton?.className).toMatch(/min-h-\[48px\]/);
 

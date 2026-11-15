@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { brandTokens } from "@/lib/tokens";
 import fs from "fs";
 import path from "path";
+import { buttonVariants } from "@/components/ui/button";
 
 /**
  * Calculates relative luminance according to WCAG 2.1 specifications.
@@ -43,7 +44,7 @@ describe("WCAG 2.1 AA Contrast Ratios Verification", () => {
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("verifies dark navy primary foreground on Road Orange button (AA normal >= 4.5:1, do not use white)", () => {
+  it("verifies dark primary foreground on Road Orange button (AA normal >= 4.5:1, do not use white)", () => {
     const ratioNavyOnOrange = getContrastRatio(
       brandTokens.primaryForeground,
       brandTokens.roadOrange
@@ -54,6 +55,14 @@ describe("WCAG 2.1 AA Contrast Ratios Verification", () => {
     // Verify white on orange fails the 4.5:1 threshold (proving why dark navy foreground is mandatory)
     const ratioWhiteOnOrange = getContrastRatio(brandTokens.cloudWhite, brandTokens.roadOrange);
     expect(ratioWhiteOnOrange).toBeLessThan(4.5);
+  });
+
+  it("uses the required warm dark foreground on orange and amber filled states", () => {
+    expect(brandTokens.primaryForeground).toBe("#1A1205");
+    expect(brandTokens.warningForeground).toBe("#1A1205");
+    expect(getContrastRatio(brandTokens.primaryForeground, brandTokens.roadOrange)).toBeGreaterThanOrEqual(4.5);
+    expect(getContrastRatio(brandTokens.warningForeground, brandTokens.warning)).toBeGreaterThanOrEqual(4.5);
+    expect(buttonVariants({ variant: "default" })).toContain("disabled:opacity-100");
   });
 
   it("verifies Slate Grey muted text against Midnight Navy and Deep Slate (AA normal >= 4.5:1)", () => {

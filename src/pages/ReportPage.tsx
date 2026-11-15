@@ -3,14 +3,12 @@
  *
  * Fully-working citizen submission flow backed by the local RoadFix server.
  * Citizens pick a ward, drop a location pin, describe the issue, attach up to
- * one photo, and submit. The server assigns a reference (RF-AG-XXXXXXXX) and
+ * up to three photos, and submit. The server assigns a reference (RF-AG-XXXXXXXX) and
  * persists the report. No mock or fallback data is used.
  */
-import { useState, useCallback, useEffect, useRef } from "react";
+import { lazy, Suspense, useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { useMap } from "react-leaflet";
-import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from "react-leaflet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,9 +23,11 @@ import {
   ChevronLeft,
   X,
   Loader2,
-  Mail,
+  Droplets,
+  Lightbulb,
+  Wrench,
 } from "lucide-react";
-import { api, type IssueCategory, type IssueSeverity, type Ward } from "@/lib/api";
+import { api, type IssueCategory, type IssueSeverity, type NearbyPotholeMatch, type Ward } from "@/lib/api";
 
 const STEPS = 3;
 
@@ -47,12 +47,12 @@ type FormData = {
 
 const CATEGORIES: { value: IssueCategory; label: string; icon: React.ElementType }[] = [
   { value: "pothole", label: "Pothole", icon: AlertTriangle },
-  { value: "waterlogging", label: "Waterlogging", icon: Mail },
+  { value: "waterlogging", label: "Waterlogging", icon: Droplets },
   { value: "open_manhole", label: "Open Manhole", icon: AlertTriangle },
-  { value: "streetlight", label: "Streetlight", icon: Mail },
+  { value: "streetlight", label: "Streetlight", icon: Lightbulb },
   { value: "garbage", label: "Garbage / Dumping", icon: AlertTriangle },
   { value: "erosion", label: "Road Erosion", icon: AlertTriangle },
-  { value: "water_pipe_leak", label: "Water Pipe Leak", icon: Mail },
+  { value: "water_pipe_leak", label: "Water Pipe Leak", icon: Wrench },
   { value: "damaged_sign", label: "Damaged Sign", icon: AlertTriangle },
   { value: "other", label: "Other", icon: AlertTriangle },
 ];
@@ -74,33 +74,7 @@ function severityVariant(severity: IssueSeverity) {
 }
 
 const AGRA_CENTER = [27.18, 78.02] as [number, number];
-
-function LocationPicker({
-  lat,
-  lng,
-  onChange,
-}: {
-  lat: number;
-  lng: number;
-  onChange: (lat: number, lng: number) => void;
-}) {
-  const map = useMap();
-
-  useEffect(() => {
-    map.flyTo([lat, lng], map.getZoom(), { animate: false });
-  }, [lat, lng, map]);
-
-  useMapEvents({
-    click: (e) => {
-      onChange(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return (
-    <Marker position={[lat, lng]}>
-      <Popup>Reported location</Popup>
-    </Marker>
-  );
-}
+const LocationMap = lazy(() => import("@/components/report/LocationMap"));
 
 export function ReportPage() {
   const [step, setStep] = useState(1);
@@ -123,7 +97,16 @@ export function ReportPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [lastRef, setLastRef] = useState<string | null>(null);
+  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
+  const [nearbyMatches, setNearbyMatches] = useState<NearbyPotholeMatch[]>([]);
+  const [nearbyCheckLoading, setNearbyCheckLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const copyResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nearbyCheckIdRef = useRef(0);
+
+  useEffect(() => () => {
+    if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -135,6 +118,37 @@ export function ReportPage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const checkId = ++nearbyCheckIdRef.current;
+    const coordinatesValid = Number.isFinite(form.lat) && form.lat >= -90 && form.lat <= 90
+      && Number.isFinite(form.lng) && form.lng >= -180 && form.lng <= 180;
+    setNearbyMatches([]);
+    if (form.category !== "pothole" || !form.wardId || !coordinatesValid) {
+      setNearbyCheckLoading(false);
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setNearbyCheckLoading(true);
+      void (async () => {
+        try {
+          const matches = await api.findNearbyPotholes(form.lat, form.lng);
+          if (nearbyCheckIdRef.current === checkId) setNearbyMatches(Array.isArray(matches) ? matches : []);
+        } catch {
+          // Duplicate detection is advisory; keep the report flow available if this check fails.
+          if (nearbyCheckIdRef.current === checkId) setNearbyMatches([]);
+        } finally {
+          if (nearbyCheckIdRef.current === checkId) setNearbyCheckLoading(false);
+        }
+      })();
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (nearbyCheckIdRef.current === checkId) nearbyCheckIdRef.current += 1;
+    };
+  }, [form.category, form.lat, form.lng, form.wardId]);
 
   const setField = useCallback((field: keyof FormData, value: FormData[keyof FormData]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -206,12 +220,79 @@ export function ReportPage() {
     reader.readAsDataURL(file);
   };
 
+  const copyReference = async () => {
+    if (!lastRef) return;
+    let copied = false;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(lastRef);
+        copied = true;
+      }
+    } catch {
+      // Try the selection-based fallback below when Clipboard API access is denied.
+    }
+
+    if (!copied) {
+      const fallback = document.createElement("textarea");
+      fallback.value = lastRef;
+      fallback.setAttribute("readonly", "");
+      fallback.style.position = "fixed";
+      fallback.style.opacity = "0";
+      document.body.appendChild(fallback);
+      fallback.select();
+      try {
+        copied = document.execCommand("copy");
+      } catch {
+        copied = false;
+      } finally {
+        fallback.remove();
+      }
+    }
+
+    if (!copied) {
+      toast.error("Could not copy the reference. Please select and copy it manually.");
+      return;
+    }
+    setCopyState("copied");
+    if (copyResetTimerRef.current) clearTimeout(copyResetTimerRef.current);
+    copyResetTimerRef.current = setTimeout(() => setCopyState("idle"), 1500);
+  };
+
   const wardOpts = wards.map((w) => ({ value: w.id, label: `${w.name} (${w.code})` }));
+
+  const renderNearbyWarning = () => {
+    if (nearbyCheckLoading) {
+      return <p role="status" className="rounded-md border border-border bg-secondary/50 p-3 text-sm text-muted-foreground">Checking for nearby pothole reports…</p>;
+    }
+    if (!nearbyMatches.length) return null;
+    return (
+      <div role="status" aria-live="polite" className="rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm text-foreground">
+        <div className="flex items-start gap-2">
+          <AlertTriangle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+          <div className="min-w-0">
+            <p className="font-semibold">A similar pothole may already have been reported nearby.</p>
+            <ul className="mt-2 space-y-1">
+              {nearbyMatches.map((match) => (
+                <li key={match.reference} className="break-words">
+                  <span className="font-mono font-medium">{match.reference}</span>
+                  {` · ${match.status.replaceAll("_", " ")}`}
+                  {Number.isFinite(match.distanceMeters) && match.distanceMeters >= 0
+                    ? ` · approximately ${match.distanceMeters < 1 ? "less than 1" : Math.round(match.distanceMeters)} metres away`
+                    : ""}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-muted-foreground">If this is a different pothole, you can continue and submit your report.</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const progress = step / STEPS;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+    <div className="box-border mx-auto w-full min-w-0 max-w-5xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
       <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-muted-foreground">
         <span>Report a civic issue</span>
       </nav>
@@ -232,7 +313,7 @@ export function ReportPage() {
         </div>
       </div>
 
-      {step === 1 && (
+      {!lastRef && step === 1 && (
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Step 1 — Where is the issue?</CardTitle>
@@ -317,21 +398,17 @@ export function ReportPage() {
                 className="aspect-video rounded-xl border border-border overflow-hidden relative"
                 style={{ minHeight: 320 }}
               >
-                <MapContainer center={[form.lat, form.lng]} zoom={15} style={{ height: "100%", width: "100%" }}>
-                  <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; OpenStreetMap contributors'
-                    eventHandlers={{ tileerror: () => setMapTilesUnavailable(true) }}
-                  />
-                  <LocationPicker
+                <Suspense fallback={<div className="grid h-full min-h-80 place-items-center bg-secondary text-sm text-muted-foreground" role="status">Loading location map…</div>}>
+                  <LocationMap
                     lat={form.lat}
                     lng={form.lng}
                     onChange={(lat, lng) => {
                       setField("lat", lat);
                       setField("lng", lng);
                     }}
+                    onTilesUnavailable={() => setMapTilesUnavailable(true)}
                   />
-                </MapContainer>
+                </Suspense>
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
                   <div className="text-primary text-3xl font-bold drop-shadow-md" aria-hidden="true">
                     ▼
@@ -365,6 +442,7 @@ export function ReportPage() {
                 Click the map or enter coordinates. Coordinates:
                 {form.lat.toFixed(4)}, {form.lng.toFixed(4)}
               </div>
+              {renderNearbyWarning()}
             </div>
           </CardContent>
           <CardFooter className="justify-end">
@@ -375,7 +453,7 @@ export function ReportPage() {
         </Card>
       )}
 
-      {step === 2 && (
+      {!lastRef && step === 2 && (
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Step 2 — Describe the issue</CardTitle>
@@ -384,10 +462,10 @@ export function ReportPage() {
             </p>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
+            <div className="space-y-5">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="category">Issue type</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="report-issue-grid grid w-full max-w-full gap-2" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
                   {CATEGORIES.map((c) => {
                     const Icon = c.icon;
                     const active = form.category === c.value;
@@ -395,21 +473,21 @@ export function ReportPage() {
                       <Button
                         key={c.value}
                         variant={active ? "default" : "outline"}
-                        className="w-full justify-between text-sm"
+                        className="report-issue-button w-full min-w-0 max-w-full justify-start whitespace-normal text-left text-sm"
                         onClick={() => setField("category", c.value)}
                       >
-                        <span className="flex items-center gap-2">
-                          <Icon className="h-4 w-4" aria-hidden="true" />
-                          {c.label}
+                        <span className="report-issue-button__content flex min-w-0 items-center gap-2">
+                          <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          <span className="report-issue-button__label">{c.label}</span>
                         </span>
                       </Button>
                     );
                   })}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="min-w-0 space-y-2">
                 <Label htmlFor="severity">Severity</Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid w-full max-w-full grid-cols-1 gap-2 sm:grid-cols-3">
                   {SEVERITIES.map((s) => {
                     const active = form.severity === s.value;
                     return (
@@ -538,7 +616,7 @@ export function ReportPage() {
         </Card>
       )}
 
-      {step === 3 && (
+      {!lastRef && step === 3 && (
         <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Step 3 — Review &amp; submit</CardTitle>
@@ -575,6 +653,8 @@ export function ReportPage() {
               <p className="text-sm text-foreground whitespace-pre-line">{form.description}</p>
             </div>
 
+            {renderNearbyWarning()}
+
             {form.photos.length > 0 && (
               <div className="bg-secondary/50 p-3 rounded-lg">
                 <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Attached photos (private to staff)</div>
@@ -609,23 +689,28 @@ export function ReportPage() {
       )}
 
       {lastRef && (
-        <Card variant="elevated" className="border-success bg-success/10">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
+        <Card variant="elevated" className="report-success-card box-border w-full min-w-0 max-w-full border-success bg-success/10">
+          <CardContent className="box-border min-w-0 max-w-full p-4 sm:p-6">
+            <div className="flex min-w-0 max-w-full items-start gap-3">
               <CheckCircle className="h-6 w-6 text-success" aria-hidden="true" />
-              <div>
+              <div className="min-w-0 max-w-full">
                 <h3 className="font-semibold text-foreground">Report submitted successfully</h3>
                 <p className="text-sm text-muted-foreground">
-                  Your reference <span className="font-mono-tech text-success font-bold">{lastRef}</span> has been
-                  assigned to <strong>{form.wardName}</strong>. Use it to track progress.
+                  Your report has been assigned to <strong>{form.wardName}</strong>. Use this reference to track progress.
                 </p>
               </div>
             </div>
-            <div className="mt-5 flex gap-3">
-              <Button asChild size="lg" className="shadow-glow">
+            <div className="report-success-reference mt-5 flex max-w-full flex-wrap items-center gap-3">
+              <code className="report-success-reference__value box-border max-w-full rounded-lg border border-success/40 bg-background/70 px-4 py-3 font-mono-tech text-xl font-bold text-success sm:text-2xl">{lastRef}</code>
+              <Button type="button" variant="outline" size="lg" className="max-w-full" onClick={() => void copyReference()} aria-live="polite">
+                {copyState === "copied" ? "Copied ✓" : "Copy"}
+              </Button>
+            </div>
+            <div className="mt-5 flex max-w-full flex-wrap gap-3">
+              <Button asChild size="lg" className="max-w-full whitespace-normal text-center shadow-glow">
                 <Link to={`/track?q=${encodeURIComponent(lastRef)}`}>Track my report</Link>
               </Button>
-              <Button asChild size="lg" variant="outline">
+              <Button asChild size="lg" variant="outline" className="max-w-full whitespace-normal text-center">
                 <Link to="/">Return home</Link>
               </Button>
             </div>

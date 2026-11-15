@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import Database from "better-sqlite3";
-import { openDatabase, migrateDatabase, ROADFIX_APPLICATION_ID } from "./database.js";
+import { openDatabase, migrateDatabase, ROADFIX_APPLICATION_ID, DEFAULT_DATABASE_PATH, configuredDatabasePath, resolveDatabasePath } from "./database.js";
 import { generateReference, generateUniqueReference, REFERENCE_PATTERN } from "./references.js";
 
 const SERVER_ROOT = fileURLToPath(new URL("../../", import.meta.url));
@@ -63,6 +63,30 @@ function insertComplaint(
     "2026-11-10T00:00:00.000Z"
   );
 }
+
+test("database path configuration is absolute or anchored to the server root", () => {
+  const serverRoot = "C:/RoadFix/server";
+  assert.equal(DEFAULT_DATABASE_PATH, resolveDatabasePath(undefined, SERVER_ROOT));
+  assert.equal(resolveDatabasePath(undefined, serverRoot), "C:\\RoadFix\\server\\data\\roadfix.sqlite");
+  assert.equal(resolveDatabasePath("data/hackathon-demo/roadfix-demo.sqlite", serverRoot), "C:\\RoadFix\\server\\data\\hackathon-demo\\roadfix-demo.sqlite");
+  assert.equal(resolveDatabasePath("C:/data/roadfix.sqlite", serverRoot), "C:\\data\\roadfix.sqlite");
+  assert.equal(configuredDatabasePath({ ROADFIX_DB_PATH: " data/hackathon-demo/roadfix-demo.sqlite " }, SERVER_ROOT), resolveDatabasePath("data/hackathon-demo/roadfix-demo.sqlite", SERVER_ROOT));
+});
+
+test("openDatabase uses ROADFIX_DB_PATH when no explicit path is supplied", (t) => {
+  const { dbPath } = createTempDb(t);
+  const previousPath = process.env.ROADFIX_DB_PATH;
+  process.env.ROADFIX_DB_PATH = dbPath;
+  let db;
+  try {
+    db = openDatabase();
+    assert.equal(db.name, dbPath);
+  } finally {
+    if (db?.open) db.close();
+    if (previousPath === undefined) delete process.env.ROADFIX_DB_PATH;
+    else process.env.ROADFIX_DB_PATH = previousPath;
+  }
+});
 
 test("initializes DB, creates schema and records deterministic migrations", (t) => {
   const db = createTempDb(t).open();

@@ -21,7 +21,7 @@
 
     /* Brand Primary (Road Orange) & Accents */
     --primary: #f97316;
-    --primary-foreground: #0b1220;
+    --primary-foreground: #1a1205;
 
     --secondary: #182438;
     --secondary-foreground: #f8fafc;
@@ -40,7 +40,7 @@
     --success-foreground: #0b1220;
 
     --warning: #f59e0b;
-    --warning-foreground: #0b1220;
+    --warning-foreground: #1a1205;
 
     --info: #38bdf8;
     --info-foreground: #0b1220;
@@ -266,4 +266,35 @@
 
 .animate-hero-reveal {
   animation: heroContentReveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Report issue choices and success content must remain shrinkable on narrow screens. */
+.report-issue-grid > * {
+  min-width: 0;
+}
+
+.report-issue-button,
+.report-issue-button__content {
+  min-width: 0;
+  max-width: 100%;
+  white-space: normal;
+}
+
+.report-issue-button__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  white-space: normal;
+}
+
+.report-success-card,
+.report-success-reference,
+.report-success-reference__value {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.report-success-reference__value {
+  word-break: break-all;
 }

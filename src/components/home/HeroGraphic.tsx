@@ -164,10 +164,10 @@ export function HeroGraphic({ activeMarker }: { activeMarker?: MarkerId } = {}) 
               <g className="city-particle"><circle cx="104" cy="116" r="1.4" /></g><g className="city-particle"><circle cx="762" cy="92" r="1" /></g><g className="city-particle"><circle cx="828" cy="240" r="1.5" /></g>
               <g className="city-particle"><circle cx="264" cy="94" r="1" /></g><g className="city-particle"><circle cx="674" cy="134" r="1.2" /></g><g className="city-particle"><circle cx="354" cy="60" r=".9" /></g>
             </g>
-            <g fill="none" stroke="#65e5f7" strokeWidth="1" opacity=".7">
+            <g fill="none" stroke="#fbbf24" strokeWidth="1" opacity=".78">
               <path d="M471 209v-28h48v28M506 181v-18h25v18" />
               <path d="M497 179v-49h40v49M516 130v-16h20v16" />
-              <circle cx="520" cy="179" r="3" fill="#65e5f7" />
+              <circle cx="520" cy="179" r="3" fill="#f97316" />
               <path d="M520 121v-17m-8 8h16" />
             </g>
             <path d="M0 500h900v40H0z" fill="#090f1a" opacity=".7" />
@@ -189,8 +189,8 @@ export function HeroGraphic({ activeMarker }: { activeMarker?: MarkerId } = {}) 
         ))}
         <div className="city-hero-scene__readout" aria-live="polite">
           <span className="city-hero-scene__readout-tag">INFRASTRUCTURE SIGNAL</span>
-          <strong>{selected.label}</strong>
-          <p>{selected.detail}</p>
+          <strong key={selected.id}>{selected.label}</strong>
+          <p key={`${selected.id}-detail`}>{selected.detail}</p>
         </div>
         <div className="city-hero-scene__axis city-hero-scene__axis--left" aria-hidden="true">ROAD / 04</div>
         <div className="city-hero-scene__axis city-hero-scene__axis--right" aria-hidden="true">NETWORK / ACTIVE</div>

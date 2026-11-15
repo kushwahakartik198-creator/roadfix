@@ -9,15 +9,12 @@
  * Press Ctrl+C to stop both processes.
  */
 import { spawn } from "node:child_process";
+import { resolve } from "node:path";
 
 const cwd = process.cwd();
-const isWindows = process.platform === "win32";
+const viteCli = resolve(cwd, "node_modules", "vite", "bin", "vite.js");
 
-const viteBin = isWindows
-  ? "node_modules\\.bin\\vite.cmd"
-  : "node_modules/.bin/vite";
-
-const vite = spawn(viteBin, [], { cwd, stdio: "inherit", env: process.env });
+const vite = spawn(process.execPath, [viteCli], { cwd, stdio: "inherit", env: process.env });
 const server = spawn(process.execPath, ["scripts/run-server.mjs"], {
   cwd,
   stdio: "inherit",

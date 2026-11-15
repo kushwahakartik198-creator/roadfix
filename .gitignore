@@ -56,3 +56,10 @@ supabase/.env*
 
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
+
+# RoadFix local data
+server/data/
+
+# Environment secrets
+.env
+server/.env

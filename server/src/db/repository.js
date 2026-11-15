@@ -76,6 +76,42 @@ export function createRepository(db) {
         to_status AS toStatus, created_at AS createdAt FROM complaint_status_history
         WHERE complaint_id = ? ORDER BY created_at DESC, id DESC`).all(id);
     },
+    findNearbyActivePotholes({ lat, lng, radiusMeters = 50, limit = 5 }) {
+      const latitudeDelta = radiusMeters / 110_574;
+      const minLat = Math.max(-90, lat - latitudeDelta);
+      const maxLat = Math.min(90, lat + latitudeDelta);
+      const longitudeScale = Math.cos((lat * Math.PI) / 180);
+      let longitudeClause = "";
+      const args = [minLat, maxLat];
+      if (Math.abs(longitudeScale) > 1e-8) {
+        const longitudeDelta = Math.min(180, radiusMeters / (111_320 * Math.abs(longitudeScale)));
+        const west = lng - longitudeDelta;
+        const east = lng + longitudeDelta;
+        if (west < -180) {
+          longitudeClause = "AND (c.longitude >= ? OR c.longitude <= ?)";
+          args.push(west + 360, east);
+        } else if (east > 180) {
+          longitudeClause = "AND (c.longitude >= ? OR c.longitude <= ?)";
+          args.push(west, east - 360);
+        } else {
+          longitudeClause = "AND c.longitude BETWEEN ? AND ?";
+          args.push(west, east);
+        }
+      }
+      const candidates = db.prepare(`SELECT c.reference, c.status, c.latitude AS lat, c.longitude AS lng
+        FROM complaints c WHERE c.category = 'pothole'
+          AND c.status IN ('submitted', 'under_review', 'verified', 'in_progress')
+          AND c.latitude BETWEEN ? AND ? ${longitudeClause}`).all(...args);
+      return candidates.map((candidate) => ({
+        reference: candidate.reference,
+        status: candidate.status,
+        distanceMeters: haversineDistanceMeters(lat, lng, candidate.lat, candidate.lng),
+      }))
+        .filter((match) => match.distanceMeters <= radiusMeters)
+        .sort((left, right) => left.distanceMeters - right.distanceMeters || left.reference.localeCompare(right.reference))
+        .slice(0, Math.max(1, Math.min(10, Math.floor(Number(limit) || 5))))
+        .map((match) => ({ ...match, distanceMeters: Math.round(match.distanceMeters) }));
+    },
     createComplaint(input, files = []) { return createComplaint(db, input, files); },
     updateComplaintStatus(id, { status, severity, note, actorId, actorRole, isAdmin = false }) {
       return updateComplaintStatus(db, id, { status, severity, note, actorId, actorRole, isAdmin });
@@ -92,6 +128,15 @@ export function createRepository(db) {
       return { total, byStatus, bySeverity, byWard };
     },
   };
+}
+
+function haversineDistanceMeters(lat1, lng1, lat2, lng2) {
+  const radians = Math.PI / 180;
+  const deltaLat = (lat2 - lat1) * radians;
+  const deltaLng = (lng2 - lng1) * radians;
+  const h = Math.sin(deltaLat / 2) ** 2
+    + Math.cos(lat1 * radians) * Math.cos(lat2 * radians) * Math.sin(deltaLng / 2) ** 2;
+  return 6_371_008.8 * 2 * Math.atan2(Math.sqrt(Math.min(1, h)), Math.sqrt(Math.max(0, 1 - h)));
 }
 
 function listComplaints(db, { wardId, status, severity, category, assignedOfficerId, q, page = 1, pageSize = 20 } = {}) {

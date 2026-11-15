@@ -143,6 +143,10 @@ test("authenticated API enforces roles, privacy, CSRF and persistence", async (t
       secondOfficerSession = await login("second@example.test", "SecondTestPass-123", "192.0.2.12");
     });
 
+    await t.test("officer complaint operations still require authentication", async () => {
+      assert.equal((await dispatch("/api/issues", { ip: "192.0.2.50" })).status, 401);
+    });
+
     await t.test("admin-only account and ward provisioning", async () => {
       const withoutCsrf = await dispatch("/api/admin/accounts", { ...json("POST", { email: "new@example.test", password: "NewOfficerPass-123", displayName: "New Officer", role: "officer", wardId: "ward-1" }), headers: { ...headersFor(adminSession, false) } });
       assert.equal(withoutCsrf.status, 403);
@@ -163,6 +167,48 @@ test("authenticated API enforces roles, privacy, CSRF and persistence", async (t
       assert.match(complaint.reference, /^RF-AG-[0-9A-HJKMNP-TV-Z]{8}$/);
       assert.equal(complaint.status, "submitted");
       assert.equal("reporterContact" in complaint, false);
+      const nearbyRepository = createRepository(db);
+      const activeFixtures = [
+        { status: "under_review", lat: 27.18005, lng: 78.02 },
+        { status: "verified", lat: 27.18, lng: 78.02005 },
+        { status: "in_progress", lat: 27.17995, lng: 78.02 },
+        { status: "resolved", lat: 27.18001, lng: 78.02 },
+        { status: "rejected", lat: 27.18, lng: 78.02001 },
+      ];
+      for (const fixture of activeFixtures) {
+        const nearbyIssue = nearbyRepository.createComplaint({
+          wardId: "ward-1", category: "pothole", severity: "medium", description: "Synthetic nearby duplicate fixture",
+          title: "Synthetic pothole fixture", locationDescription: "Synthetic test location", lat: fixture.lat, lng: fixture.lng,
+          reporterName: "Private Nearby Reporter", reporterContact: "+911234567890",
+        });
+        const transitions = {
+          under_review: ["under_review"], verified: ["under_review", "verified"],
+          in_progress: ["under_review", "verified", "in_progress"],
+          resolved: ["under_review", "verified", "in_progress", "resolved"],
+          rejected: ["rejected"],
+        }[fixture.status] ?? [];
+        for (const status of transitions) {
+          nearbyRepository.updateComplaintStatus(nearbyIssue.id, {
+            status, actorId: null, actorRole: "officer",
+            ...(["resolved", "rejected"].includes(status) ? { note: "Private workflow note" } : {}),
+          });
+        }
+      }
+      const nearbyPath = "/api/issues/nearby-potholes?lat=27.18&lng=78.02";
+      const nearbyResponse = await dispatch(nearbyPath);
+      assert.equal(nearbyResponse.status, 200, "citizens can check without an authenticated session");
+      const nearbyMatches = nearbyResponse.json().data;
+      assert.deepEqual(nearbyMatches.map((item) => item.status).sort(), ["submitted", "under_review", "verified", "in_progress"].sort());
+      assert.ok(nearbyMatches.every((item) => item.distanceMeters <= 50));
+      assert.equal("reporterContact" in nearbyMatches[0], false);
+      assert.equal("reporterName" in nearbyMatches[0], false);
+      assert.equal("lat" in nearbyMatches[0], false);
+      assert.equal("lng" in nearbyMatches[0], false);
+      assert.equal("note" in nearbyMatches[0], false);
+      assert.equal((await dispatch("/api/issues/nearby-potholes?lat=27.18&lng=78.03")).json().data.length, 0);
+      assert.equal((await dispatch("/api/issues/nearby-potholes?lat=NaN&lng=78.02")).status, 400);
+      assert.equal((await dispatch("/api/issues/nearby-potholes?lat=91&lng=78.02")).status, 400);
+      assert.equal((await dispatch(nearbyPath, { headers: { origin: "https://untrusted.example" } })).status, 403);
       const second = await dispatch("/api/issues", json("POST", { wardId: "ward-2", category: "pothole", description: "A second synthetic issue in another ward", lat: 27.2, lng: 78.1 }));
       assert.equal(second.status, 201);
       secondComplaint = second.json().data;
@@ -357,6 +403,16 @@ test("authenticated API enforces roles, privacy, CSRF and persistence", async (t
       for (let i = 0; i < 31; i += 1) historyLimit = await dispatch(`/api/issues/${complaint.id}/history`, { ip: "192.0.2.32" });
       assert.equal(historyLimit.status, 429);
       assert.ok(Number(historyLimit.headers["retry-after"]) > 0);
+    });
+
+    await t.test("nearby pothole checks are rate limited for anonymous callers", async () => {
+      const path = "/api/issues/nearby-potholes?lat=27.18&lng=78.02";
+      for (let index = 0; index < 30; index += 1) {
+        assert.equal((await dispatch(path, { ip: "198.51.100.88" })).status, 200);
+      }
+      const limited = await dispatch(path, { ip: "198.51.100.88" });
+      assert.equal(limited.status, 429);
+      assert.ok(Number(limited.headers["retry-after"]) > 0);
     });
 
     await t.test("session close/reopen persistence and logout revocation", async () => {
