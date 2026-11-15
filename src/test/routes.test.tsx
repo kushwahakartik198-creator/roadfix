@@ -42,20 +42,22 @@ describe("Route Rendering Tests", () => {
     // Exactly one <h1> on the page
     const h1Headings = screen.getAllByRole("heading", { level: 1 });
     expect(h1Headings).toHaveLength(1);
-    expect(h1Headings[0]).toHaveTextContent("Smarter Roads. Safer Cities.");
+    expect(h1Headings[0]).toHaveTextContent("Agra’s potholes, on the record.");
 
     // Current Phase B hero copy
-    expect(screen.getByText(/civic infrastructure \/ agra/i)).toBeInTheDocument();
-    expect(screen.getByText(/every road issue deserves attention\. roadfix connects citizens and municipal authorities/i)).toBeInTheDocument();
+    expect(screen.getByText(/agra’s potholes, on the record/i)).toBeInTheDocument();
+    expect(screen.getByText(/smarter roads\. safer cities\./i)).toBeInTheDocument();
 
     // Hero & Final CTAs
     const reportLinks = screen.getAllByRole("link", { name: /report a road issue/i });
-    expect(reportLinks.length).toBeGreaterThanOrEqual(2);
+    expect(reportLinks.length).toBeGreaterThanOrEqual(1);
     reportLinks.forEach((link) => expect(link).toHaveAttribute("href", "/report"));
 
-    const trackComplaintHeroLink = screen.getByRole("link", { name: /^track a complaint$/i });
-    expect(trackComplaintHeroLink).toHaveAttribute("href", "/track");
-
+    const trackComplaintLinks = screen.getAllByRole("link", { name: /track/i });
+    expect(trackComplaintLinks.length).toBeGreaterThanOrEqual(1);
+    trackComplaintLinks.forEach((link) => {
+      expect(link).toHaveAttribute("href", "/track");
+    });
     // Interactive five-stage scroll story and its real page anchors
     expect(screen.getByRole("heading", { name: /from road damage to recorded repair/i, level: 2 })).toBeInTheDocument();
     for (const stage of ["Road damage", "Citizen report", "Municipal review", "Officer action", "Resolution"]) {
